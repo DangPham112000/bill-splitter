@@ -1,4 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
+import { DEFAULT_CURRENCY, currencyValidator } from './money.js';
 
 export const SPLITTER_TYPES = ['trip', 'party', 'project', 'other'] as const;
 export const SPLITTER_STATUSES = ['open', 'locked'] as const;
@@ -9,8 +10,14 @@ const splitterSchema = new Schema(
     type: { type: String, enum: SPLITTER_TYPES, default: 'trip' },
     startDate: { type: Date },
     endDate: { type: Date },
-    // Only VND for now; kept as a field so amounts are never ambiguous.
-    currency: { type: String, enum: ['VND'], default: 'VND' },
+    // Currency every balance is computed in, e.g. THB for a Bangkok trip. Chosen at creation;
+    // changing it later would mean converting every transaction.
+    currency: {
+      type: String,
+      uppercase: true,
+      default: DEFAULT_CURRENCY,
+      validate: currencyValidator,
+    },
     // Secret part of the join link. Regenerating it invalidates old links.
     inviteToken: { type: String, required: true },
     hasInitialFund: { type: Boolean, default: false },

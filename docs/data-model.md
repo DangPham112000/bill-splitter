@@ -8,9 +8,13 @@ Splitter 1 ── * Member 1 ── * Transaction 1 ── * AuditLog
 Device (global, keyed by deviceId) ┘  createdByDeviceId / AuditLog.deviceId
 ```
 
-## Money
+## Money and currencies
 
-Every amount is an **integer number of VND**: no floats, no minor units. Validators reject anything that is not a safe non-negative integer (`isVndAmount` in `money.ts`). When a total has to be divided, use `splitEqually` / `splitByWeights`, which hand the leftover dong to the first participants so the parts always add up to the total.
+Each splitter has one currency, chosen when it is created. VND is the default; a Bangkok trip can use THB and a trip to China CNY. Any ISO 4217 code is accepted.
+
+Every amount is an **integer in that currency's minor unit**: dong for VND (no decimals), satang for THB, fen for CNY. So 150,000 ₫ is stored as `150000` and 120.50 ฿ as `12050`. `currencyDecimals()` in `money.ts` gives the number of decimals for display and input. Validators reject anything that is not a safe non-negative integer, so no floats are ever stored. When a total has to be divided, use `splitEqually` / `splitByWeights`, which hand the leftover minor units to the first participants so the parts always add up to the total.
+
+A transaction paid in another currency (say 500 ฿ on a trip tracked in VND) keeps what was actually paid in `original` and stores the converted figure in `amount`. Balances and settlement only ever use `amount`, so they stay in one currency; the exchange rate is implied by the two numbers.
 
 ## Splitter
 
@@ -21,7 +25,7 @@ A trip, party or project that people join.
 | `name`                 | string                                    | Required, up to 100 characters                   |
 | `type`                 | `trip` \| `party` \| `project` \| `other` | Default `trip`                                   |
 | `startDate`, `endDate` | Date                                      | Optional; `endDate` cannot be before `startDate` |
-| `currency`             | `VND`                                     | Only VND for now                                 |
+| `currency`             | ISO 4217 code                             | Default `VND`; all balances use it               |
 | `inviteToken`          | string                                    | Secret part of the join link; unique             |
 | `hasInitialFund`       | boolean                                   | Whether the group pools money up front           |
 | `status`               | `open` \| `locked`                        | Locked splitters accept no new transactions      |
@@ -60,20 +64,21 @@ One browser or phone, identified by a random `deviceId` the client generates and
 
 One movement of money in a splitter.
 
-| Field                     | Type                         | Notes                                |
-| ------------------------- | ---------------------------- | ------------------------------------ |
-| `splitterId`              | ObjectId → Splitter          |                                      |
-| `type`                    | see below                    |                                      |
-| `amount`                  | integer VND                  | Greater than 0                       |
-| `description`, `category` | string                       | Optional                             |
-| `date`                    | Date                         | When it happened (defaults to now)   |
-| `paidByMemberId`          | ObjectId → Member            | Who handed over the money            |
-| `receivedByMemberId`      | ObjectId → Member            | Who got the money                    |
-| `paidFromFund`            | boolean                      | Expense paid from the initial fund   |
-| `split`                   | `{ method, participants[] }` | Who shares an expense or income      |
-| `createdByMemberId`       | ObjectId → Member            |                                      |
-| `createdByDeviceId`       | string → Device              | Edit rights are bound to this device |
-| `deletedAt`               | Date \| null                 | Soft delete                          |
+| Field                     | Type                         | Notes                                                |
+| ------------------------- | ---------------------------- | ---------------------------------------------------- |
+| `splitterId`              | ObjectId → Splitter          |                                                      |
+| `type`                    | see below                    |                                                      |
+| `amount`                  | integer, minor units         | Greater than 0, in the splitter's currency           |
+| `original`                | `{ currency, amount }`       | Optional: what was actually paid in another currency |
+| `description`, `category` | string                       | Optional                                             |
+| `date`                    | Date                         | When it happened (defaults to now)                   |
+| `paidByMemberId`          | ObjectId → Member            | Who handed over the money                            |
+| `receivedByMemberId`      | ObjectId → Member            | Who got the money                                    |
+| `paidFromFund`            | boolean                      | Expense paid from the initial fund                   |
+| `split`                   | `{ method, participants[] }` | Who shares an expense or income                      |
+| `createdByMemberId`       | ObjectId → Member            |                                                      |
+| `createdByDeviceId`       | string → Device              | Edit rights are bound to this device                 |
+| `deletedAt`               | Date \| null                 | Soft delete                                          |
 
 Rules per type, enforced on validation:
 

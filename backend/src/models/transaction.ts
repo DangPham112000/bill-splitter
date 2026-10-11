@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { isPositiveVndAmount, vndValidator } from './money.js';
+import { amountValidator, currencyValidator, isPositiveAmount } from './money.js';
 
 export const TRANSACTION_TYPES = ['expense', 'income', 'fund_contribution', 'transfer'] as const;
 export const SPLIT_METHODS = ['equal', 'exact', 'shares'] as const;
@@ -9,8 +9,8 @@ const participantSchema = new Schema(
     memberId: { type: Schema.Types.ObjectId, ref: 'Member', required: true },
     // Number of shares for the "shares" method (e.g. 2 for someone who brought a partner).
     shares: { type: Number, min: 1, validate: Number.isSafeInteger },
-    // Resolved amount in VND for every method, so balances never re-run the split.
-    amount: { type: Number, required: true, validate: vndValidator },
+    // Resolved amount for every method, so balances never re-run the split.
+    amount: { type: Number, required: true, validate: amountValidator },
   },
   { _id: false },
 );
@@ -23,15 +23,31 @@ const splitSchema = new Schema(
   { _id: false },
 );
 
+// What was actually paid when it was not in the splitter's currency, e.g. 500 THB spent on a
+// trip tracked in VND. The converted `amount` is what balances use; the rate is implied.
+const originalAmountSchema = new Schema(
+  {
+    currency: { type: String, uppercase: true, required: true, validate: currencyValidator },
+    amount: {
+      type: Number,
+      required: true,
+      validate: { validator: isPositiveAmount, message: 'original amount must be a positive whole amount' },
+    },
+  },
+  { _id: false },
+);
+
 const transactionSchema = new Schema(
   {
     splitterId: { type: Schema.Types.ObjectId, ref: 'Splitter', required: true },
     type: { type: String, enum: TRANSACTION_TYPES, required: true },
+    // In the splitter's currency, in minor units.
     amount: {
       type: Number,
       required: true,
-      validate: { validator: isPositiveVndAmount, message: 'amount must be a positive whole VND' },
+      validate: { validator: isPositiveAmount, message: 'amount must be a positive whole amount' },
     },
+    original: { type: originalAmountSchema },
     description: { type: String, trim: true, maxlength: 200, default: '' },
     category: { type: String, trim: true, maxlength: 50 },
     date: { type: Date, required: true, default: Date.now },
