@@ -12,6 +12,10 @@ pnpm monorepo, the same stack as Event Manager:
 - `nginx/`: serves the built frontend and proxies `/graphql` and `/health` to the backend
 - Clerk (optional sign-in) is added in a later task.
 
+## Data model
+
+Collections, fields and indexes are described in [docs/data-model.md](docs/data-model.md). Money is always stored as whole VND.
+
 ## Run locally
 
 Requirements: Node.js 22+, pnpm 10 (`corepack enable`), Docker.
