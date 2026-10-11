@@ -31,7 +31,10 @@ const originalAmountSchema = new Schema(
     amount: {
       type: Number,
       required: true,
-      validate: { validator: isPositiveAmount, message: 'original amount must be a positive whole amount' },
+      validate: {
+        validator: isPositiveAmount,
+        message: 'original amount must be a positive whole amount',
+      },
     },
   },
   { _id: false },
