@@ -6,6 +6,8 @@ import { expressMiddleware } from '@as-integrations/express5';
 import { typeDefs } from './graphql/typeDefs.js';
 import { resolvers } from './graphql/resolvers.js';
 import { getHealth } from './health.js';
+// Registers the Mongoose models so their indexes are built on connect.
+import './models/index.js';
 
 const port = Number(process.env.PORT) || 4000;
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/bill-splitter';

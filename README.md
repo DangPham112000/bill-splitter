@@ -1,6 +1,6 @@
 # Bill Splitter
 
-Split the costs of a trip, project or party. Members join through a link without signing in, record what they paid and received, and the app works out who pays whom with the fewest transfers. Amounts are in VND.
+Split the costs of a trip, project or party. Members join through a link without signing in, record what they paid and received, and the app works out who pays whom with the fewest transfers. Amounts default to VND, and a splitter can use another currency such as THB or CNY.
 
 ## Stack
 
@@ -11,6 +11,10 @@ pnpm monorepo, the same stack as Event Manager:
 - MongoDB 7
 - `nginx/`: serves the built frontend and proxies `/graphql` and `/health` to the backend
 - Clerk (optional sign-in) is added in a later task.
+
+## Data model
+
+Collections, fields and indexes are described in [docs/data-model.md](docs/data-model.md). VND is the default currency and any other can be chosen per splitter; amounts are stored as integers in the currency's minor unit.
 
 ## Run locally
 
