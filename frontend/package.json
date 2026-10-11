@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@apollo/client": "^4.3.3",
+    "@bill-splitter/shared": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "graphql": "^16.14.2",
     "react": "^19.3.0",

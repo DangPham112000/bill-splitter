@@ -12,7 +12,9 @@ Device (global, keyed by deviceId) ┘  createdByDeviceId / AuditLog.deviceId
 
 Each splitter has one currency, chosen when it is created. VND is the default; a Bangkok trip can use THB and a trip to China CNY. Any ISO 4217 code is accepted.
 
-Every amount is an **integer in that currency's minor unit**: dong for VND (no decimals), satang for THB, fen for CNY. So 150,000 ₫ is stored as `150000` and 120.50 ฿ as `12050`. `currencyDecimals()` in `money.ts` gives the number of decimals for display and input. Validators reject anything that is not a safe non-negative integer, so no floats are ever stored. When a total has to be divided, use `splitEqually` / `splitByWeights`, which hand the leftover minor units to the first participants so the parts always add up to the total.
+Every amount is an **integer in that currency's minor unit**: dong for VND (no decimals), satang for THB, fen for CNY. So 150,000 ₫ is stored as `150000` and 120.50 ฿ as `12050`. `currencyDecimals()` in [`shared/src/money.ts`](../shared/src/money.ts) gives the number of decimals for display and input. Validators reject anything that is not a safe non-negative integer, so no floats are ever stored. When a total has to be divided, use `splitEqually` / `splitByWeights`, which hand the leftover minor units to the first participants so the parts always add up to the total.
+
+On screen, amounts use the Vietnamese number style in every currency: `formatAmount()` in [`shared/src/amountFormat.ts`](../shared/src/amountFormat.ts) turns `1250000` into `1.250.000 ₫` and `12050` THB into `120,50 ฿`, and `parseAmount()` reads what people type, including shorthands such as `50k` and `1.2tr`.
 
 A transaction paid in another currency (say 500 ฿ on a trip tracked in VND) keeps what was actually paid in `original` and stores the converted figure in `amount`. Balances and settlement only ever use `amount`, so they stay in one currency; the exchange rate is implied by the two numbers.
 
