@@ -1,0 +1,40 @@
+# Runs the whole app locally: frontend (nginx) on :8080, backend, MongoDB.
+# For hot reload, run only the database here (`docker compose up -d mongodb`) and `pnpm dev`.
+name: bill-splitter
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - '${APP_PORT:-8080}:80'
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - PORT=4000
+      - MONGODB_URI=mongodb://mongodb:27017/bill-splitter
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    ports:
+      # Localhost only: MongoDB runs without auth in development.
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mongodb_data:
