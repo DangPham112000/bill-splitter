@@ -8,6 +8,7 @@ pnpm monorepo, the same stack as Event Manager:
 
 - `frontend/`: React 19, Vite, TypeScript, Tailwind CSS, Apollo Client
 - `backend/`: Node.js, Express, Apollo Server (GraphQL), Mongoose
+- `shared/`: TypeScript used by both, such as the money helpers that format and parse amounts (`1.250.000 ₫`, `50k`, `1.2tr`). It builds on `pnpm install` and rebuilds in watch mode under `pnpm dev`.
 - MongoDB 7
 - `nginx/`: serves the built frontend and proxies `/graphql` and `/health` to the backend
 - Clerk (optional sign-in) is added in a later task.
@@ -48,8 +49,8 @@ Open http://localhost:8080 (set `APP_PORT` to use another port).
 | Command             | What it does                           |
 | ------------------- | -------------------------------------- |
 | `pnpm dev`          | Run backend and frontend in watch mode |
-| `pnpm build`        | Build both packages                    |
+| `pnpm build`        | Build all packages                     |
 | `pnpm lint`         | ESLint across the repo                 |
-| `pnpm typecheck`    | TypeScript checks for both packages    |
+| `pnpm typecheck`    | TypeScript checks for all packages     |
 | `pnpm format`       | Format with Prettier                   |
 | `pnpm format:check` | Check formatting                       |
