@@ -38,7 +38,7 @@ The backend reads `backend/.env` if present; copy `backend/.env.example` to chan
 docker compose up --build
 ```
 
-Open http://localhost:8083 (set `APP_PORT` to use another port). This is the same `docker-compose.yml` that runs in production.
+Open http://localhost:8083 (set `APP_PORT` to use another port). This is the same `docker-compose.yml` that runs in production, so it needs the shared MongoDB from [ecosystem-infra](https://github.com/DangPham112000/ecosystem-infra) running first (it creates the `ecosystem` network and the `bill-splitter` Mongo user), and `MONGO_PASSWORD` set to that user's password.
 
 ## Sign-in
 
@@ -52,11 +52,11 @@ Sign-in is optional and never a gate: members join a splitter through its link w
 
 ## Deployment
 
-Pushing to `main` deploys to production at **https://bills.dantepham.site** (`.github/workflows/deploy.yml`): it builds the backend and frontend images, pushes them to GHCR, copies `docker-compose.yml` to `/opt/bill-splitter` on the shared VPS and runs `doppler run -- docker compose up -d`. Pull requests run lint, typecheck and build (`.github/workflows/ci.yml`).
+Pushing to `main` deploys to production at **https://bills.dantepham.site** (`.github/workflows/deploy.yml`): it builds the backend and frontend images, pushes them to GHCR, copies `docker-compose.yml` to `/opt/bill-splitter` on the shared VPS and runs `doppler run -- docker compose up -d`. MongoDB is the ecosystem's shared instance (`ecosystem-mongo`, DAN-90): the backend logs in as the `bill-splitter` user with `MONGO_PASSWORD` from Doppler `bill-splitter/prd` (a reference to `shared/prd`). Pull requests run lint, typecheck and build (`.github/workflows/ci.yml`).
 
 ```
 Browser ─HTTPS─▶ Cloudflare (proxied, SSL "Flexible") ─HTTP─▶ host nginx :80
-  └─ bills.dantepham.site ─▶ 127.0.0.1:8083 (frontend nginx) ─▶ backend:4000 ─▶ mongodb
+  └─ bills.dantepham.site ─▶ 127.0.0.1:8083 (frontend nginx) ─▶ backend:4000 ─▶ ecosystem-mongo (shared)
 ```
 
 Only the frontend publishes a port, bound to `127.0.0.1`. The backend and MongoDB are reachable only on the stack's internal Docker network.

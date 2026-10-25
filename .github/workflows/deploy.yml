@@ -164,6 +164,23 @@ jobs:
               exit 1
             fi
 
-            docker compose pull
+            # The backend uses the shared MongoDB (ecosystem-infra, DAN-90). Stop before changing
+            # anything if that stack or this app's Mongo password is missing.
+            if ! docker network inspect ecosystem > /dev/null 2>&1; then
+              echo "Network 'ecosystem' is missing: deploy the shared Mongo stack (ecosystem-infra) first." >&2
+              exit 1
+            fi
+            if [ -z "$(doppler secrets get MONGO_PASSWORD --plain)" ]; then
+              echo "MONGO_PASSWORD is missing in Doppler bill-splitter/prd." >&2
+              exit 1
+            fi
+
+            # Compose needs MONGO_PASSWORD even to pull, so every compose call runs under Doppler.
+            doppler run -- docker compose pull
             doppler run -- docker compose up -d --remove-orphans
+
+            # The stack's own Mongo container was removed as an orphan above. Its data was not
+            # kept (Dang, 2026-10-25), so its volume goes too. No-op once it is gone.
+            docker volume rm bill-splitter_mongodb_data 2>/dev/null || true
+
             docker image prune -f
