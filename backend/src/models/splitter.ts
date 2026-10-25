@@ -23,7 +23,7 @@ const splitterSchema = new Schema(
     hasInitialFund: { type: Boolean, default: false },
     // "locked" freezes transactions once the group has settled up.
     status: { type: String, enum: SPLITTER_STATUSES, default: 'open' },
-    // Auth provider user id of the signed-in creator.
+    // Clerk user id of the signed-in creator (shared Clerk app; there is no User collection).
     adminUserId: { type: String, required: true },
   },
   { timestamps: true },

@@ -1,35 +1,46 @@
-# Runs the whole app locally: frontend (nginx) on :8080, backend, MongoDB.
-# For hot reload, run only the database here (`docker compose up -d mongodb`) and `pnpm dev`.
+# Production stack on the shared VPS (deployed by .github/workflows/deploy.yml to /opt/bill-splitter).
+# Fixed project name: containers, network and volume get a "bill-splitter" prefix,
+# so nothing collides with other stacks on the same VPS.
+# Locally, `docker compose up --build` builds the same images from source.
 name: bill-splitter
 
 services:
   frontend:
+    image: ghcr.io/${IMAGE_PREFIX:-dangpham112000/bill-splitter}/frontend:latest
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    restart: unless-stopped
     ports:
-      - '${APP_PORT:-8080}:80'
+      # Only the VPS itself can reach this port. The host nginx serves
+      # bills.dantepham.site on 80 and proxies here.
+      - '127.0.0.1:${APP_PORT:-8083}:80'
     depends_on:
       - backend
 
   backend:
+    image: ghcr.io/${IMAGE_PREFIX:-dangpham112000/bill-splitter}/backend:latest
     build:
       context: .
       dockerfile: backend/Dockerfile
+    restart: unless-stopped
     environment:
       - PORT=4000
       - MONGODB_URI=mongodb://mongodb:27017/bill-splitter
+      # Shared Clerk app; on the VPS `doppler run` fills these in from bill-splitter/prd.
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-}
+      - CLERK_AUTHORIZED_PARTIES=${CLERK_AUTHORIZED_PARTIES:-https://bills.dantepham.site}
     depends_on:
       mongodb:
         condition: service_healthy
+    # No published port: the frontend nginx reaches it over the internal network.
 
   mongodb:
     image: mongo:7
-    ports:
-      # Localhost only: MongoDB runs without auth in development.
-      - '127.0.0.1:27017:27017'
+    restart: unless-stopped
     volumes:
       - mongodb_data:/data/db
+    # No published port: MongoDB has no auth, so it must never be public.
     healthcheck:
       test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
       interval: 5s

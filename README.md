@@ -11,7 +11,7 @@ pnpm monorepo, the same stack as Event Manager:
 - `shared/`: TypeScript used by both, such as the money helpers that format and parse amounts (`1.250.000 ₫`, `50k`, `1.2tr`). It builds on `pnpm install` and rebuilds in watch mode under `pnpm dev`.
 - MongoDB 7
 - `nginx/`: serves the built frontend and proxies `/graphql` and `/health` to the backend
-- Clerk (optional sign-in) is added in a later task.
+- Clerk for optional sign-in, using the ecosystem's shared Clerk app (see [Sign-in](#sign-in))
 
 ## Data model
 
@@ -25,12 +25,12 @@ Requirements: Node.js 22+, pnpm 10 (`corepack enable`), Docker.
 
 ```sh
 pnpm install
-docker compose up -d mongodb   # MongoDB on localhost:27017
-pnpm dev                       # backend on :4000, frontend on :5173
+docker run -d --name bill-splitter-mongo -p 127.0.0.1:27017:27017 mongo:7
+pnpm dev   # backend on :4000, frontend on :5173
 ```
 
 Open http://localhost:5173. Vite proxies `/graphql` and `/health` to the backend.
-The backend reads `backend/.env` if present; copy `backend/.env.example` to change the defaults.
+The backend reads `backend/.env` if present; copy `backend/.env.example` to change the defaults. Without Clerk keys the app runs signed out, which is enough for everything except creating a splitter.
 
 ### Whole app in Docker
 
@@ -38,7 +38,51 @@ The backend reads `backend/.env` if present; copy `backend/.env.example` to chan
 docker compose up --build
 ```
 
-Open http://localhost:8080 (set `APP_PORT` to use another port).
+Open http://localhost:8083 (set `APP_PORT` to use another port). This is the same `docker-compose.yml` that runs in production.
+
+## Sign-in
+
+Sign-in is optional and never a gate: members join a splitter through its link without an account. Only becoming an admin (creating a splitter) needs it.
+
+- The app uses the ecosystem's shared [Clerk](https://clerk.com) application `yolo-ecosystem` (production instance on `dantepham.site`), so one session works across every `*.dantepham.site` app.
+- The frontend wraps the app in `ClerkProvider`, shows a "Sign in" button (Clerk's modal) or the user menu, and the Apollo client sends the session token as `Authorization: Bearer <token>` when signed in.
+- The backend verifies the token with `@clerk/backend` (`backend/src/auth.ts`) and puts the Clerk user id in the GraphQL context as `clerkId` (null when signed out or the token is invalid, so the request carries on anonymously). `requireClerkId(context)` throws `UNAUTHENTICATED` for actions that need an account. `{ me { clerkId } }` returns the signed-in user or null.
+- **There is no User table.** The Clerk user id is the identity: `Splitter.adminUserId` is the creator's Clerk user id and `Member.userId` is set to the member's Clerk user id when a signed-in user links their member. Names and avatars come from Clerk for now and from the shared `core.users` later.
+- `CLERK_AUTHORIZED_PARTIES` is only `https://bills.dantepham.site`, so session tokens issued to the other apps are refused.
+
+## Deployment
+
+Pushing to `main` deploys to production at **https://bills.dantepham.site** (`.github/workflows/deploy.yml`): it builds the backend and frontend images, pushes them to GHCR, copies `docker-compose.yml` to `/opt/bill-splitter` on the shared VPS and runs `doppler run -- docker compose up -d`. Pull requests run lint, typecheck and build (`.github/workflows/ci.yml`).
+
+```
+Browser ─HTTPS─▶ Cloudflare (proxied, SSL "Flexible") ─HTTP─▶ host nginx :80
+  └─ bills.dantepham.site ─▶ 127.0.0.1:8083 (frontend nginx) ─▶ backend:4000 ─▶ mongodb
+```
+
+Only the frontend publishes a port, bound to `127.0.0.1`. The backend and MongoDB are reachable only on the stack's internal Docker network.
+
+### Secrets
+
+All secrets live in Doppler project `bill-splitter`, config `prd`, so their values can be read again when needed. GitHub keeps only `DOPPLER_TOKEN`.
+
+| Variable                                  | Value                                 | Used by                                                      |
+| ----------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `CLERK_SECRET_KEY`                        | `${shared.prd.CLERK_SECRET_KEY}`      | Backend, through `doppler run` on the VPS                    |
+| `CLERK_PUBLISHABLE_KEY`                   | `${shared.prd.CLERK_PUBLISHABLE_KEY}` | Frontend build: CI passes it as `VITE_CLERK_PUBLISHABLE_KEY` |
+| `CLERK_AUTHORIZED_PARTIES`                | `https://bills.dantepham.site`        | Backend                                                      |
+| `VPS_HOST`, `VPS_USERNAME`, `VPS_SSH_KEY` | `${shared.prd.VPS_HOST}` etc.         | Deploy job (SSH to the VPS); masked in the logs              |
+
+There is no `VITE_` copy in Doppler, because Doppler does not allow a reference to a reference. After changing a secret, re-run the deploy workflow.
+
+GitHub repository secret: `DOPPLER_TOKEN` only (read-only service token for `bill-splitter/prd`). GHCR pushes and the VPS pull use the job's own `GITHUB_TOKEN`, which expires when the job ends, so there is no personal access token.
+
+### One-time server setup
+
+1. `mkdir -p /opt/bill-splitter` as the deploy user.
+2. Host nginx: `/etc/nginx/sites-available/bills.conf` with `server_name bills.dantepham.site;` and `proxy_pass http://127.0.0.1:8083;` (plus the usual `Host`, `X-Forwarded-For` and `X-Forwarded-Proto $http_x_forwarded_proto` headers), linked into `sites-enabled`, then `nginx -t && systemctl reload nginx`. Check first that port 8083 is free (`ss -ltn`).
+3. Cloudflare: a proxied `A` record for `bills` pointing at the VPS.
+4. Doppler: store a read-only service token for `bill-splitter/prd` for the deploy user, scoped to the app directory: `doppler configure set token --scope /opt/bill-splitter`.
+5. Clerk: `bills` is already in the allowed subdomains of the shared app.
 
 ## Health check
 

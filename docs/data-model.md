@@ -31,13 +31,13 @@ A trip, party or project that people join.
 | `inviteToken`          | string                                    | Secret part of the join link; unique             |
 | `hasInitialFund`       | boolean                                   | Whether the group pools money up front           |
 | `status`               | `open` \| `locked`                        | Locked splitters accept no new transactions      |
-| `adminUserId`          | string                                    | Signed-in creator's auth user id                 |
+| `adminUserId`          | string                                    | Clerk user id of the signed-in creator           |
 
 Indexes: `inviteToken` (unique), `adminUserId + createdAt`.
 
 ## Member
 
-A name inside one splitter. Members don't need an account.
+A name inside one splitter. Members don't need an account. There is no User collection: signed-in users are identified by their Clerk user id from the ecosystem's shared Clerk app.
 
 | Field               | Type                               | Notes                                                              |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------ |
@@ -45,7 +45,7 @@ A name inside one splitter. Members don't need an account.
 | `displayName`       | string                             | As typed, up to 50 characters                                      |
 | `normalizedName`    | string                             | Set automatically: lowercase, no accents, `đ` → `d`, single spaces |
 | `role`              | `admin` \| `treasurer` \| `member` | Admins and treasurers can adjust any transaction                   |
-| `userId`            | string                             | Optional link to a signed-in account                               |
+| `userId`            | string                             | Optional Clerk user id, set when a signed-in user links the member |
 | `createdByDeviceId` | string                             | Device that created the name, so it can be offered there again     |
 | `removedAt`         | Date \| null                       | Soft delete; history stays                                         |
 

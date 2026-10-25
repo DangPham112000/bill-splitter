@@ -20,7 +20,7 @@ const memberSchema = new Schema(
     displayName: { type: String, required: true, trim: true, maxlength: 50 },
     normalizedName: { type: String, required: true },
     role: { type: String, enum: MEMBER_ROLES, default: 'member' },
-    // Set when the member is linked to a signed-in account (required for the admin).
+    // Clerk user id, set when the member is linked to a signed-in account (required for the admin).
     userId: { type: String },
     // Device that created this name, so it can be offered again on that device.
     createdByDeviceId: { type: String },

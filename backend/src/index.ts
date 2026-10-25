@@ -6,6 +6,7 @@ import { expressMiddleware } from '@as-integrations/express5';
 import { typeDefs } from './graphql/typeDefs.js';
 import { resolvers } from './graphql/resolvers.js';
 import { getHealth } from './health.js';
+import { getClerkIdFromAuthHeader, type Context } from './auth.js';
 // Registers the Mongoose models so their indexes are built on connect.
 import './models/index.js';
 
@@ -21,9 +22,19 @@ async function startServer() {
     res.status(health.status === 'ok' ? 200 : 503).json(health);
   });
 
-  const server = new ApolloServer({ typeDefs, resolvers });
+  const server = new ApolloServer<Context>({ typeDefs, resolvers });
   await server.start();
-  app.use('/graphql', cors<cors.CorsRequest>(), express.json(), expressMiddleware(server));
+  app.use(
+    '/graphql',
+    cors<cors.CorsRequest>(),
+    express.json(),
+    expressMiddleware(server, {
+      // Sign-in is optional: a missing or invalid token just means an anonymous request.
+      context: async ({ req }) => ({
+        clerkId: await getClerkIdFromAuthHeader(req.headers.authorization),
+      }),
+    }),
+  );
 
   app.listen(port, () => {
     console.log(`Server ready at http://localhost:${port}/graphql`);
