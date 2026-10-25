@@ -26,26 +26,18 @@ services:
     restart: unless-stopped
     environment:
       - PORT=4000
-      - MONGODB_URI=mongodb://mongodb:27017/bill-splitter
+      # Shared MongoDB (ecosystem-infra, DAN-90): own Mongo user, own database.
+      # MONGO_PASSWORD comes from Doppler bill-splitter/prd via `doppler run`.
+      - MONGODB_URI=mongodb://bill-splitter:${MONGO_PASSWORD:?MONGO_PASSWORD is not set}@ecosystem-mongo:27017/bill-splitter?authSource=admin
       # Shared Clerk app; on the VPS `doppler run` fills these in from bill-splitter/prd.
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-}
       - CLERK_AUTHORIZED_PARTIES=${CLERK_AUTHORIZED_PARTIES:-https://bills.dantepham.site}
-    depends_on:
-      mongodb:
-        condition: service_healthy
+    networks:
+      - default
+      - ecosystem
     # No published port: the frontend nginx reaches it over the internal network.
 
-  mongodb:
-    image: mongo:7
-    restart: unless-stopped
-    volumes:
-      - mongodb_data:/data/db
-    # No published port: MongoDB has no auth, so it must never be public.
-    healthcheck:
-      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-volumes:
-  mongodb_data:
+networks:
+  # Created by the shared Mongo stack in ecosystem-infra; deploy that first.
+  ecosystem:
+    external: true
