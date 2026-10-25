@@ -10,6 +10,9 @@ COPY shared/ ./shared/
 RUN pnpm install --frozen-lockfile --filter "frontend..."
 
 COPY frontend/ ./frontend/
+# Public Clerk key, inlined into the bundle by Vite. CI reads it from Doppler.
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 RUN pnpm --filter frontend run build
 
 FROM nginx:alpine
