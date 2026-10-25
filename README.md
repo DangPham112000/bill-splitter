@@ -63,17 +63,18 @@ Only the frontend publishes a port, bound to `127.0.0.1`. The backend and MongoD
 
 ### Secrets
 
-Doppler project `bill-splitter`, config `prd`:
+All secrets live in Doppler project `bill-splitter`, config `prd`, so their values can be read again when needed. GitHub keeps only `DOPPLER_TOKEN`.
 
-| Variable                   | Value                                 | Used by                                                                                        |
-| -------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `CLERK_SECRET_KEY`         | `${shared.prd.CLERK_SECRET_KEY}`      | Backend, through `doppler run` on the VPS                                                      |
-| `CLERK_PUBLISHABLE_KEY`    | `${shared.prd.CLERK_PUBLISHABLE_KEY}` | Frontend build: CI reads it with `DOPPLER_TOKEN` and passes it as `VITE_CLERK_PUBLISHABLE_KEY` |
-| `CLERK_AUTHORIZED_PARTIES` | `https://bills.dantepham.site`        | Backend                                                                                        |
+| Variable                                  | Value                                 | Used by                                                      |
+| ----------------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `CLERK_SECRET_KEY`                        | `${shared.prd.CLERK_SECRET_KEY}`      | Backend, through `doppler run` on the VPS                    |
+| `CLERK_PUBLISHABLE_KEY`                   | `${shared.prd.CLERK_PUBLISHABLE_KEY}` | Frontend build: CI passes it as `VITE_CLERK_PUBLISHABLE_KEY` |
+| `CLERK_AUTHORIZED_PARTIES`                | `https://bills.dantepham.site`        | Backend                                                      |
+| `VPS_HOST`, `VPS_USERNAME`, `VPS_SSH_KEY` | `${shared.prd.VPS_HOST}` etc.         | Deploy job (SSH to the VPS); masked in the logs              |
 
 There is no `VITE_` copy in Doppler, because Doppler does not allow a reference to a reference. After changing a secret, re-run the deploy workflow.
 
-GitHub repository secrets: `DOPPLER_TOKEN` (read-only service token for `bill-splitter/prd`), `GH_PAT` (pushes to and pulls from GHCR), `VPS_HOST`, `VPS_USERNAME`, `VPS_SSH_KEY`.
+GitHub repository secret: `DOPPLER_TOKEN` only (read-only service token for `bill-splitter/prd`). GHCR pushes and the VPS pull use the job's own `GITHUB_TOKEN`, which expires when the job ends, so there is no personal access token.
 
 ### One-time server setup
 
