@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import mongoose from 'mongoose';
 import { GraphQLError } from 'graphql';
-import { requireClerkId, type Context } from '../auth.js';
+import { requireClerkId, requireSessionToken, type Context } from '../auth.js';
+import { eventUrl, getEvent, listEvents, type EventManagerEvent } from '../eventManager.js';
 import {
   DEFAULT_CURRENCY,
   MemberModel,
@@ -14,8 +15,14 @@ import {
 type SplitterDoc = InstanceType<typeof SplitterModel>;
 type SplitterType = 'trip' | 'party' | 'project' | 'other';
 
+interface LinkedMemberInput {
+  name: string;
+  clerkId: string;
+}
+
 interface CreateSplitterInput {
   name: string;
+  description?: string | null;
   type?: SplitterType | null;
   coverEmoji?: string | null;
   startDate?: string | null;
@@ -24,9 +31,13 @@ interface CreateSplitterInput {
   hasInitialFund?: boolean | null;
   adminName: string;
   memberNames?: string[] | null;
+  eventManagerEventId?: string | null;
+  linkedMembers?: LinkedMemberInput[] | null;
 }
 
-type UpdateSplitterInput = Partial<Omit<CreateSplitterInput, 'adminName' | 'memberNames'>>;
+type UpdateSplitterInput = Partial<
+  Omit<CreateSplitterInput, 'adminName' | 'memberNames' | 'eventManagerEventId' | 'linkedMembers'>
+>;
 
 const MAX_STARTING_MEMBERS = 100;
 
@@ -87,6 +98,32 @@ async function canRead(splitter: SplitterDoc, clerkId: string | null): Promise<b
   );
 }
 
+/**
+ * Check the starting members tied to accounts: each must be an attendee of the event the splitter
+ * is created from (so nobody can push a splitter into a stranger's list), and not the admin.
+ */
+function checkLinkedMembers(
+  linked: LinkedMemberInput[],
+  event: EventManagerEvent | null,
+  adminClerkId: string,
+): { displayName: string; userId: string }[] {
+  if (!linked.length) return [];
+  if (!event) throw badInput('Members can only be linked to accounts when an event is picked');
+  const attendees = new Set(event.attendees.map((a) => a.user.id));
+  const seen = new Set<string>();
+  return linked.map(({ name, clerkId }) => {
+    if (clerkId === adminClerkId) throw badInput('You are already in the splitter as its admin');
+    if (!attendees.has(clerkId)) throw badInput(`${name} is not taking part in that event`);
+    if (seen.has(clerkId)) throw badInput(`${name} is in the list twice`);
+    seen.add(clerkId);
+    const displayName = cleanName(name);
+    if (!displayName) throw badInput('Every member needs a name');
+    return { displayName, userId: clerkId };
+  });
+}
+
+const cleanDescription = (value: string | null | undefined) => value?.trim() || undefined;
+
 async function findReadable(id: string, clerkId: string | null): Promise<SplitterDoc> {
   if (!mongoose.isValidObjectId(id)) throw notFound();
   const splitter = await SplitterModel.findById(id);
@@ -108,6 +145,9 @@ export const splitterResolvers = {
 
     splitter: (_parent: unknown, { id }: { id: string }, context: Context) =>
       findReadable(id, context.clerkId),
+
+    eventManagerEvents: (_parent: unknown, _args: unknown, context: Context) =>
+      listEvents(requireSessionToken(context)),
   },
 
   Mutation: {
@@ -121,13 +161,21 @@ export const splitterResolvers = {
       const adminName = cleanName(input.adminName);
       if (!adminName) throw badInput('Enter your name in this splitter');
       const memberNames = (input.memberNames ?? []).map(cleanName).filter(Boolean);
-      if (memberNames.length > MAX_STARTING_MEMBERS) {
+
+      // Read the event live with the user's own token, so Event Manager checks they can see it.
+      const event = input.eventManagerEventId
+        ? await getEvent(requireSessionToken(context), input.eventManagerEventId)
+        : null;
+      if (input.eventManagerEventId && !event) throw badInput('That event was not found');
+      const linkedMembers = checkLinkedMembers(input.linkedMembers ?? [], event, clerkId);
+
+      if (memberNames.length + linkedMembers.length > MAX_STARTING_MEMBERS) {
         throw badInput(`Add at most ${MAX_STARTING_MEMBERS} members up front`);
       }
 
       // "Đăng" and "dang" are the same person to the group, so they clash.
       const seen = new Map<string, string>();
-      for (const name of [adminName, ...memberNames]) {
+      for (const name of [adminName, ...linkedMembers.map((m) => m.displayName), ...memberNames]) {
         const key = normalizeName(name);
         const first = seen.get(key);
         if (first !== undefined) throw badInput(`"${name}" is the same name as "${first}"`);
@@ -136,6 +184,7 @@ export const splitterResolvers = {
 
       const splitter = new SplitterModel({
         name: input.name,
+        description: cleanDescription(input.description),
         type: input.type ?? 'trip',
         coverEmoji: input.coverEmoji?.trim() || undefined,
         startDate: parseDay(input.startDate, 'startDate'),
@@ -144,6 +193,7 @@ export const splitterResolvers = {
         hasInitialFund: input.hasInitialFund ?? false,
         inviteToken: newInviteToken(),
         adminUserId: clerkId,
+        linkedEvent: event ? { app: 'event-manager', id: event.id } : undefined,
       });
       await saveOrBadInput(() => splitter.save());
 
@@ -152,6 +202,11 @@ export const splitterResolvers = {
         await saveOrBadInput(() =>
           MemberModel.insertMany([
             { splitterId: splitter._id, displayName: adminName, role: 'admin', userId: clerkId },
+            ...linkedMembers.map((member) => ({
+              splitterId: splitter._id,
+              ...member,
+              role: 'member',
+            })),
             ...memberNames.map((displayName) => ({
               splitterId: splitter._id,
               displayName,
@@ -183,6 +238,7 @@ export const splitterResolvers = {
       if (input.name != null) splitter.name = input.name;
       if (input.type != null) splitter.type = input.type;
       if (input.hasInitialFund != null) splitter.hasInitialFund = input.hasInitialFund;
+      if ('description' in input) splitter.description = cleanDescription(input.description);
       if ('coverEmoji' in input) splitter.coverEmoji = input.coverEmoji?.trim() || undefined;
       if ('startDate' in input) splitter.startDate = parseDay(input.startDate, 'startDate');
       if ('endDate' in input) splitter.endDate = parseDay(input.endDate, 'endDate');
@@ -209,6 +265,10 @@ export const splitterResolvers = {
     startDate: (splitter: SplitterDoc) => formatDay(splitter.startDate),
     endDate: (splitter: SplitterDoc) => formatDay(splitter.endDate),
     createdAt: (splitter: SplitterDoc) => splitter.createdAt.toISOString(),
+    linkedEvent: (splitter: SplitterDoc) =>
+      splitter.linkedEvent
+        ? { ...splitter.linkedEvent, url: eventUrl(splitter.linkedEvent.id) }
+        : null,
     isAdmin: (splitter: SplitterDoc, _args: unknown, context: Context) =>
       splitter.adminUserId === context.clerkId,
     inviteToken: (splitter: SplitterDoc, _args: unknown, context: Context) =>
@@ -221,6 +281,17 @@ export const splitterResolvers = {
       const order = { admin: 0, treasurer: 1, member: 2 } as const;
       return members.sort((a, b) => order[a.role] - order[b.role]);
     },
+  },
+
+  EventManagerEvent: {
+    url: (event: EventManagerEvent) => eventUrl(event.id),
+    attendees: (event: EventManagerEvent, _args: unknown, context: Context) =>
+      event.attendees.map((a) => ({
+        clerkId: a.user.id,
+        name: a.user.name,
+        participation: a.participation,
+        isMe: a.user.id === context.clerkId,
+      })),
   },
 
   Member: {

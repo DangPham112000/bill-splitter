@@ -8,10 +8,12 @@ import { GraphQLError } from 'graphql';
 export interface Context {
   /** Clerk user id of the signed-in user (shared across the ecosystem apps), or null. */
   clerkId: string | null;
+  /** The verified Clerk session token, forwarded when calling other ecosystem apps; null if anonymous. */
+  sessionToken: string | null;
 }
 
 // Origins allowed to use a session token (the token's "azp" claim), comma-separated.
-// In production only https://bills.dantepham.site, so tokens from other apps are refused.
+// In production every ecosystem origin (Doppler shared/prd), as in the other apps.
 const getAuthorizedParties = () =>
   process.env.CLERK_AUTHORIZED_PARTIES?.split(',')
     .map((s) => s.trim())
@@ -54,4 +56,19 @@ export function requireClerkId(context: Context): string {
     throw new GraphQLError('Sign in to do this', { extensions: { code: 'UNAUTHENTICATED' } });
   }
   return context.clerkId;
+}
+
+/** Build the GraphQL context from the request's Authorization header. */
+export async function contextFromAuthHeader(header: string | undefined): Promise<Context> {
+  const clerkId = await getClerkIdFromAuthHeader(header);
+  return {
+    clerkId,
+    sessionToken: clerkId && header ? header.slice('Bearer '.length).trim() : null,
+  };
+}
+
+/** The signed-in user's session token, for calls to other ecosystem apps. */
+export function requireSessionToken(context: Context): string {
+  requireClerkId(context);
+  return context.sessionToken!;
 }

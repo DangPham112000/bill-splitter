@@ -23,4 +23,5 @@ export const resolvers = {
   Mutation: splitterResolvers.Mutation,
   Splitter: splitterResolvers.Splitter,
   Member: splitterResolvers.Member,
+  EventManagerEvent: splitterResolvers.EventManagerEvent,
 };

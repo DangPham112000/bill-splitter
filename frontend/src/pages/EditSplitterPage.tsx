@@ -33,6 +33,7 @@ export function EditSplitterPage() {
           id: splitter.id,
           input: {
             name: values.name,
+            description: values.description || null,
             type: values.type,
             coverEmoji: values.coverEmoji || null,
             startDate: values.startDate || null,
@@ -54,6 +55,7 @@ export function EditSplitterPage() {
       <SplitterForm
         initial={{
           name: splitter.name,
+          description: splitter.description ?? '',
           type: splitter.type,
           coverEmoji: splitter.coverEmoji ?? '',
           startDate: splitter.startDate ?? '',

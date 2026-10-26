@@ -37,7 +37,7 @@ type SplitterFormProps = {
   onSubmit: (values: SplitterFormValues) => void;
 };
 
-/** Name, type, dates, emoji, currency and fund setting: shared by "create" and "edit". */
+/** Name, description, type, dates, emoji, currency and fund setting: shared by "create" and "edit". */
 export function SplitterForm({
   initial,
   submitLabel,
@@ -63,7 +63,7 @@ export function SplitterForm({
       return setLocalError('The end date is before the start date');
     }
     setLocalError(null);
-    onSubmit({ ...values, name: values.name.trim() });
+    onSubmit({ ...values, name: values.name.trim(), description: values.description.trim() });
   };
 
   const shownError = localError ?? error;
@@ -79,6 +79,15 @@ export function SplitterForm({
           maxLength={100}
           autoFocus
           required
+        />
+      </Field>
+
+      <Field label="Description (optional)">
+        <textarea
+          className={`${inputClass} min-h-20`}
+          value={values.description}
+          onChange={(e) => set('description', e.target.value)}
+          maxLength={1000}
         />
       </Field>
 

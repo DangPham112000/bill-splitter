@@ -8,6 +8,7 @@ const splitterSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 100 },
     type: { type: String, enum: SPLITTER_TYPES, default: 'trip' },
+    description: { type: String, trim: true, maxlength: 1000 },
     // Optional emoji shown on the splitter's card, e.g. "🏖️".
     coverEmoji: { type: String, trim: true, maxlength: 16 },
     startDate: { type: Date },
@@ -25,6 +26,18 @@ const splitterSchema = new Schema(
     hasInitialFund: { type: Boolean, default: false },
     // "locked" freezes transactions once the group has settled up.
     status: { type: String, enum: SPLITTER_STATUSES, default: 'open' },
+    // The event in another ecosystem app this splitter was created from (DAN-96). Only a
+    // reference: the event's details were copied once, at creation, and are not kept in sync.
+    linkedEvent: {
+      type: new Schema(
+        {
+          app: { type: String, enum: ['event-manager'], required: true },
+          id: { type: String, required: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     // Clerk user id of the signed-in creator (shared Clerk app; there is no User collection).
     adminUserId: { type: String, required: true },
   },

@@ -3,6 +3,7 @@ import type { SplitterType } from '../graphql/splitters';
 
 export type SplitterFormValues = {
   name: string;
+  description: string;
   type: SplitterType;
   coverEmoji: string;
   startDate: string;
@@ -13,6 +14,7 @@ export type SplitterFormValues = {
 
 export const emptySplitterForm: SplitterFormValues = {
   name: '',
+  description: '',
   type: 'trip',
   coverEmoji: '',
   startDate: '',

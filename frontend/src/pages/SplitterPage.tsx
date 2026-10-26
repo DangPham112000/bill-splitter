@@ -66,6 +66,24 @@ export function SplitterPage() {
         )}
       </div>
 
+      {(splitter.description || splitter.linkedEvent) && (
+        <section className="flex flex-col gap-2 text-left">
+          {splitter.description && (
+            <p className="whitespace-pre-line text-slate-700">{splitter.description}</p>
+          )}
+          {splitter.linkedEvent && (
+            <a
+              href={splitter.linkedEvent.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-sky-700 hover:underline"
+            >
+              Open the event in Event Manager ↗
+            </a>
+          )}
+        </section>
+      )}
+
       {splitter.inviteToken && <InviteLink token={splitter.inviteToken} />}
 
       <section className="flex flex-col gap-2">
