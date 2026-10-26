@@ -25,6 +25,7 @@ A trip, party or project that people join.
 | Field                  | Type                                      | Notes                                            |
 | ---------------------- | ----------------------------------------- | ------------------------------------------------ |
 | `name`                 | string                                    | Required, up to 100 characters                   |
+| `description`          | string                                    | Optional, up to 1000 characters                  |
 | `type`                 | `trip` \| `party` \| `project` \| `other` | Default `trip`                                   |
 | `coverEmoji`           | string                                    | Optional, shown on the splitter's card           |
 | `startDate`, `endDate` | Date                                      | Optional; `endDate` cannot be before `startDate` |
@@ -33,8 +34,11 @@ A trip, party or project that people join.
 | `hasInitialFund`       | boolean                                   | Whether the group pools money up front           |
 | `status`               | `open` \| `locked`                        | Locked splitters accept no new transactions      |
 | `adminUserId`          | string                                    | Clerk user id of the signed-in creator           |
+| `linkedEvent`          | `{ app, id }`                             | Event Manager event it was created from (DAN-96) |
 
-Indexes: `inviteToken` (unique), `adminUserId + createdAt`.
+Indexes: `inviteToken` (unique), `adminUserId + createdAt`, `linkedEvent.app + linkedEvent.id` (unique: one splitter per event).
+
+`linkedEvent` is only a reference (`app` is `event-manager`). The event's title, description, dates and attendees are copied into the form once, when the splitter is created, and are not kept in sync. Event Manager's "Split costs" button opens `/events/:eventId`, which calls `splitterForEvent`: it returns the event's splitter, or creates it with the caller as admin and everyone who JOINED the event as linked members. Attendees the admin keeps (when creating from the form) become members with `userId` set to their Clerk id; the backend checks each one is an attendee of the event, read live from Event Manager with the admin's own session token.
 
 ## Member
 

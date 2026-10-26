@@ -5,9 +5,12 @@ export type MemberRole = 'admin' | 'treasurer' | 'member';
 
 export type Member = { id: string; displayName: string; role: MemberRole };
 
+export type LinkedEvent = { app: string; id: string; url: string };
+
 export type Splitter = {
   id: string;
   name: string;
+  description: string | null;
   type: SplitterType;
   coverEmoji: string | null;
   startDate: string | null;
@@ -18,12 +21,35 @@ export type Splitter = {
   inviteToken: string | null;
   isAdmin: boolean;
   members: Member[];
+  linkedEvent: LinkedEvent | null;
+};
+
+export type Participation = 'JOINED' | 'INTERESTED';
+
+export type EventManagerAttendee = {
+  clerkId: string;
+  name: string;
+  participation: Participation;
+  isMe: boolean;
+};
+
+export type EventManagerEvent = {
+  id: string;
+  title: string;
+  description: string | null;
+  startTime: string;
+  endTime: string;
+  location: string | null;
+  icon: string | null;
+  url: string;
+  attendees: EventManagerAttendee[];
 };
 
 export const SPLITTER_FIELDS = gql`
   fragment SplitterFields on Splitter {
     id
     name
+    description
     type
     coverEmoji
     startDate
@@ -37,6 +63,11 @@ export const SPLITTER_FIELDS = gql`
       id
       displayName
       role
+    }
+    linkedEvent {
+      app
+      id
+      url
     }
   }
 `;
@@ -75,6 +106,36 @@ export const UPDATE_SPLITTER = gql`
     }
   }
   ${SPLITTER_FIELDS}
+`;
+
+export const SPLITTER_FOR_EVENT = gql`
+  mutation SplitterForEvent($eventManagerEventId: ID!, $timeZone: String) {
+    splitterForEvent(eventManagerEventId: $eventManagerEventId, timeZone: $timeZone) {
+      ...SplitterFields
+    }
+  }
+  ${SPLITTER_FIELDS}
+`;
+
+export const EVENT_MANAGER_EVENTS = gql`
+  query EventManagerEvents {
+    eventManagerEvents {
+      id
+      title
+      description
+      startTime
+      endTime
+      location
+      icon
+      url
+      attendees {
+        clerkId
+        name
+        participation
+        isMe
+      }
+    }
+  }
 `;
 
 export const SPLITTER_TYPE_LABELS: Record<SplitterType, string> = {

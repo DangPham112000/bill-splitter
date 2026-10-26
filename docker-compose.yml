@@ -32,6 +32,9 @@ services:
       # Shared Clerk app; on the VPS `doppler run` fills these in from bill-splitter/prd.
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-}
       - CLERK_AUTHORIZED_PARTIES=${CLERK_AUTHORIZED_PARTIES:-https://bills.dantepham.site}
+      # Event Manager's GraphQL on the ecosystem network, for creating a splitter from an event (DAN-96).
+      - EVENT_MANAGER_GRAPHQL_URL=${EVENT_MANAGER_GRAPHQL_URL:-http://event-manager-backend:4000/graphql}
+      - EVENT_MANAGER_URL=${EVENT_MANAGER_URL:-https://events.dantepham.site}
     networks:
       - default
       - ecosystem
