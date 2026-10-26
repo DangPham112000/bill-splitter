@@ -8,6 +8,8 @@ const splitterSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 100 },
     type: { type: String, enum: SPLITTER_TYPES, default: 'trip' },
+    // Optional emoji shown on the splitter's card, e.g. "🏖️".
+    coverEmoji: { type: String, trim: true, maxlength: 16 },
     startDate: { type: Date },
     endDate: { type: Date },
     // Currency every balance is computed in, e.g. THB for a Bangkok trip. Chosen at creation;

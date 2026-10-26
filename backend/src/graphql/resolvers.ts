@@ -1,6 +1,7 @@
 import type { Context } from '../auth.js';
 import { getHealth } from '../health.js';
 import { findUser } from '../coreUsers.js';
+import { splitterResolvers } from './splitters.js';
 
 export const resolvers = {
   Query: {
@@ -17,5 +18,9 @@ export const resolvers = {
         }
       );
     },
+    ...splitterResolvers.Query,
   },
+  Mutation: splitterResolvers.Mutation,
+  Splitter: splitterResolvers.Splitter,
+  Member: splitterResolvers.Member,
 };

@@ -26,6 +26,7 @@ A trip, party or project that people join.
 | ---------------------- | ----------------------------------------- | ------------------------------------------------ |
 | `name`                 | string                                    | Required, up to 100 characters                   |
 | `type`                 | `trip` \| `party` \| `project` \| `other` | Default `trip`                                   |
+| `coverEmoji`           | string                                    | Optional, shown on the splitter's card           |
 | `startDate`, `endDate` | Date                                      | Optional; `endDate` cannot be before `startDate` |
 | `currency`             | ISO 4217 code                             | Default `VND`; all balances use it               |
 | `inviteToken`          | string                                    | Secret part of the join link; unique             |
