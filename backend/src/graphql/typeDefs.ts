@@ -5,9 +5,16 @@ export const typeDefs = `#graphql
     time: String!
   }
 
-  "The signed-in user. Only the Clerk user id: there is no User table in this app."
+  """
+  The signed-in user. There is no User table in this app: the Clerk user id is the identity,
+  and email, name and avatar come from the ecosystem's shared core.users.
+  """
   type Me {
     clerkId: ID!
+    "Null only if the user is unknown to both core.users and Clerk."
+    email: String
+    name: String
+    avatar: String
   }
 
   type Query {
