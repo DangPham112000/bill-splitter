@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import { GraphQLError } from 'graphql';
 import { requireClerkId, requireSessionToken, type Context } from '../auth.js';
 import { eventUrl, getEvent, listEvents, type EventManagerEvent } from '../eventManager.js';
+import { findUser } from '../coreUsers.js';
+import { daysFromEvent, descriptionFromEvent, splitterLookFromIcon } from '@bill-splitter/shared';
 import {
   DEFAULT_CURRENCY,
   MemberModel,
@@ -122,6 +124,75 @@ function checkLinkedMembers(
   });
 }
 
+type StartingMember = { displayName: string; userId?: string };
+
+/**
+ * Save a splitter with its admin and starting members. The shared MongoDB is not a replica
+ * set, so there are no transactions: a failure undoes the splitter by hand.
+ */
+async function insertSplitter(
+  fields: Omit<ConstructorParameters<typeof SplitterModel>[0] & object, 'inviteToken'>,
+  adminName: string,
+  members: StartingMember[],
+): Promise<SplitterDoc> {
+  const splitter = new SplitterModel({ ...fields, inviteToken: newInviteToken() });
+  await saveOrBadInput(() => splitter.save());
+  try {
+    await saveOrBadInput(() =>
+      MemberModel.insertMany([
+        {
+          splitterId: splitter._id,
+          displayName: adminName,
+          role: 'admin',
+          userId: splitter.adminUserId,
+        },
+        ...members.map((member) => ({ splitterId: splitter._id, ...member, role: 'member' })),
+      ]),
+    );
+  } catch (error) {
+    await MemberModel.deleteMany({ splitterId: splitter._id });
+    await SplitterModel.deleteOne({ _id: splitter._id });
+    throw error;
+  }
+  return splitter;
+}
+
+const splitterOfEvent = (eventId: string) =>
+  SplitterModel.findOne({ 'linkedEvent.app': 'event-manager', 'linkedEvent.id': eventId });
+
+/** The event's splitter, if this user is in it; otherwise say who can add them. */
+async function openExisting(splitter: SplitterDoc, clerkId: string): Promise<SplitterDoc> {
+  if (await canRead(splitter, clerkId)) return splitter;
+  const admin = await findUser(splitter.adminUserId);
+  throw new GraphQLError(
+    `This event already has a splitter, "${splitter.name}", and you are not in it yet. ` +
+      `Ask ${admin?.name ?? 'its admin'} to add you.`,
+    { extensions: { code: 'FORBIDDEN' } },
+  );
+}
+
+const isDuplicateKey = (error: unknown) => (error as { code?: number })?.code === 11000;
+
+/** A name not yet in `taken` (compared like the unique index does): "Minh", then "Minh 2". */
+function uniqueName(name: string, taken: Set<string>): string {
+  const base = cleanName(name).slice(0, 46) || 'Member';
+  let candidate = base;
+  for (let n = 2; taken.has(normalizeName(candidate)); n++) candidate = `${base} ${n}`;
+  taken.add(normalizeName(candidate));
+  return candidate;
+}
+
+/** YYYY-MM-DD of an instant in the user's time zone; Vietnam's when it is missing or unknown. */
+function dayInZone(timeZone: string | null | undefined): (date: Date) => string {
+  let format: Intl.DateTimeFormat;
+  try {
+    format = new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || 'Asia/Ho_Chi_Minh' });
+  } catch {
+    format = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  }
+  return (date) => format.format(date);
+}
+
 const cleanDescription = (value: string | null | undefined) => value?.trim() || undefined;
 
 async function findReadable(id: string, clerkId: string | null): Promise<SplitterDoc> {
@@ -167,6 +238,8 @@ export const splitterResolvers = {
         ? await getEvent(requireSessionToken(context), input.eventManagerEventId)
         : null;
       if (input.eventManagerEventId && !event) throw badInput('That event was not found');
+      const existing = event ? await splitterOfEvent(event.id) : null;
+      if (existing) throw badInput(`This event already has a splitter: ${existing.name}`);
       const linkedMembers = checkLinkedMembers(input.linkedMembers ?? [], event, clerkId);
 
       if (memberNames.length + linkedMembers.length > MAX_STARTING_MEMBERS) {
@@ -182,44 +255,78 @@ export const splitterResolvers = {
         seen.set(key, name);
       }
 
-      const splitter = new SplitterModel({
-        name: input.name,
-        description: cleanDescription(input.description),
-        type: input.type ?? 'trip',
-        coverEmoji: input.coverEmoji?.trim() || undefined,
-        startDate: parseDay(input.startDate, 'startDate'),
-        endDate: parseDay(input.endDate, 'endDate'),
-        currency: parseCurrency(input.currency),
-        hasInitialFund: input.hasInitialFund ?? false,
-        inviteToken: newInviteToken(),
-        adminUserId: clerkId,
-        linkedEvent: event ? { app: 'event-manager', id: event.id } : undefined,
-      });
-      await saveOrBadInput(() => splitter.save());
+      return insertSplitter(
+        {
+          name: input.name,
+          description: cleanDescription(input.description),
+          type: input.type ?? 'trip',
+          coverEmoji: input.coverEmoji?.trim() || undefined,
+          startDate: parseDay(input.startDate, 'startDate'),
+          endDate: parseDay(input.endDate, 'endDate'),
+          currency: parseCurrency(input.currency),
+          hasInitialFund: input.hasInitialFund ?? false,
+          adminUserId: clerkId,
+          linkedEvent: event ? { app: 'event-manager', id: event.id } : undefined,
+        },
+        adminName,
+        [...linkedMembers, ...memberNames.map((displayName) => ({ displayName }))],
+      );
+    },
 
-      // The shared MongoDB is not a replica set, so there are no transactions: undo by hand.
+    splitterForEvent: async (
+      _parent: unknown,
+      { eventManagerEventId, timeZone }: { eventManagerEventId: string; timeZone?: string | null },
+      context: Context,
+    ) => {
+      const clerkId = requireClerkId(context);
+      const event = await getEvent(requireSessionToken(context), eventManagerEventId);
+      if (!event) {
+        throw new GraphQLError('That event does not exist, or you are not taking part in it', {
+          extensions: { code: 'NOT_FOUND' },
+        });
+      }
+
+      const existing = await splitterOfEvent(event.id);
+      if (existing) return openExisting(existing, clerkId);
+
+      // Everyone who joined the event, linked to their account; "interested" people stay out.
+      const me = event.attendees.find((a) => a.user.id === clerkId);
+      const taken = new Set<string>();
+      const adminName = uniqueName(
+        me?.user.name || (await findUser(clerkId))?.name || 'Admin',
+        taken,
+      );
+      const members = event.attendees
+        .filter((a) => a.user.id !== clerkId && a.participation === 'JOINED')
+        .slice(0, MAX_STARTING_MEMBERS)
+        .map((a) => ({ displayName: uniqueName(a.user.name, taken), userId: a.user.id }));
+
+      const dayOf = dayInZone(timeZone);
+      const days = daysFromEvent(event.startTime, event.endTime, dayOf);
+      const look = splitterLookFromIcon(event.icon);
       try {
-        await saveOrBadInput(() =>
-          MemberModel.insertMany([
-            { splitterId: splitter._id, displayName: adminName, role: 'admin', userId: clerkId },
-            ...linkedMembers.map((member) => ({
-              splitterId: splitter._id,
-              ...member,
-              role: 'member',
-            })),
-            ...memberNames.map((displayName) => ({
-              splitterId: splitter._id,
-              displayName,
-              role: 'member',
-            })),
-          ]),
+        return await insertSplitter(
+          {
+            name: event.title.slice(0, 100),
+            description: descriptionFromEvent(event) || undefined,
+            type: look.type,
+            coverEmoji: look.coverEmoji || undefined,
+            startDate: parseDay(days.startDate, 'startDate'),
+            endDate: parseDay(days.endDate, 'endDate'),
+            currency: DEFAULT_CURRENCY,
+            hasInitialFund: false,
+            adminUserId: clerkId,
+            linkedEvent: { app: 'event-manager', id: event.id },
+          },
+          adminName,
+          members,
         );
       } catch (error) {
-        await MemberModel.deleteMany({ splitterId: splitter._id });
-        await SplitterModel.deleteOne({ _id: splitter._id });
+        // Someone else (or a second click) created it a moment ago: open that one.
+        const created = isDuplicateKey(error) ? await splitterOfEvent(event.id) : null;
+        if (created) return openExisting(created, clerkId);
         throw error;
       }
-      return splitter;
     },
 
     updateSplitter: async (

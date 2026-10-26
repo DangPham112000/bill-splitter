@@ -52,6 +52,11 @@ splitterSchema.pre('validate', function () {
 
 splitterSchema.index({ inviteToken: 1 }, { unique: true });
 splitterSchema.index({ adminUserId: 1, createdAt: -1 });
+// One splitter per event, so Event Manager's "Split costs" button always opens the same one.
+splitterSchema.index(
+  { 'linkedEvent.app': 1, 'linkedEvent.id': 1 },
+  { unique: true, partialFilterExpression: { 'linkedEvent.id': { $exists: true } } },
+);
 
 export type Splitter = InferSchemaType<typeof splitterSchema>;
 export const SplitterModel = model('Splitter', splitterSchema);

@@ -108,6 +108,15 @@ export const UPDATE_SPLITTER = gql`
   ${SPLITTER_FIELDS}
 `;
 
+export const SPLITTER_FOR_EVENT = gql`
+  mutation SplitterForEvent($eventManagerEventId: ID!, $timeZone: String) {
+    splitterForEvent(eventManagerEventId: $eventManagerEventId, timeZone: $timeZone) {
+      ...SplitterFields
+    }
+  }
+  ${SPLITTER_FIELDS}
+`;
+
 export const EVENT_MANAGER_EVENTS = gql`
   query EventManagerEvents {
     eventManagerEvents {

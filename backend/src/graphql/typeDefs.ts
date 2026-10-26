@@ -161,6 +161,14 @@ export const typeDefs = `#graphql
   type Mutation {
     "Create a splitter and become its admin. Needs sign-in."
     createSplitter(input: CreateSplitterInput!): Splitter!
+    """
+    The splitter of an Event Manager event, created on the spot the first time (Event Manager's
+    "Split costs" button). A new one copies the event's title, description and days (in timeZone,
+    an IANA name such as Asia/Ho_Chi_Minh), makes the caller admin, and adds everyone who joined
+    the event as members linked to their accounts. An existing one is returned if the caller is in
+    it, otherwise the error names its admin.
+    """
+    splitterForEvent(eventManagerEventId: ID!, timeZone: String): Splitter!
     "Edit a splitter's details. Admin only."
     updateSplitter(id: ID!, input: UpdateSplitterInput!): Splitter!
   }
