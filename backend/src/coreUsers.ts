@@ -66,7 +66,11 @@ export async function findUser(clerkId: string): Promise<CoreUser | null> {
  */
 export async function findUsers(clerkIds: string[]): Promise<Map<string, CoreUser>> {
   const ids = [...new Set(clerkIds)];
-  const docs = ids.length ? await coreUsers().find({ clerkId: { $in: ids } }).toArray() : [];
+  const docs = ids.length
+    ? await coreUsers()
+        .find({ clerkId: { $in: ids } })
+        .toArray()
+    : [];
   const found = new Map(docs.map((doc) => [doc.clerkId, pick(doc)]));
   for (const id of ids) {
     if (found.has(id)) continue;
