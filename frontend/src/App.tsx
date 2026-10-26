@@ -11,13 +11,14 @@ const STATUS = gql`
     }
     me {
       clerkId
+      name
     }
   }
 `;
 
 type StatusData = {
   health: { status: string; database: string };
-  me: { clerkId: string } | null;
+  me: { clerkId: string; name: string | null } | null;
 };
 
 export default function App() {
@@ -42,7 +43,7 @@ export default function App() {
         <p className="text-sm text-slate-400">{serverStatus}</p>
         {data && (
           <p className="text-sm text-slate-400">
-            {data.me ? 'Signed in: the server recognizes your account' : 'Not signed in'}
+            {data.me ? `Signed in as ${data.me.name ?? 'your account'}` : 'Not signed in'}
           </p>
         )}
       </main>

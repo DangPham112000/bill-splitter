@@ -37,7 +37,7 @@ Indexes: `inviteToken` (unique), `adminUserId + createdAt`.
 
 ## Member
 
-A name inside one splitter. Members don't need an account. There is no User collection: signed-in users are identified by their Clerk user id from the ecosystem's shared Clerk app.
+A name inside one splitter. Members don't need an account. There is no User collection: signed-in users are identified by their Clerk user id from the ecosystem's shared Clerk app, and their email, name and avatar are read from the shared `core.users` (DAN-93).
 
 | Field               | Type                               | Notes                                                              |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------ |
