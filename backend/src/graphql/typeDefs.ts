@@ -35,6 +35,20 @@ export const typeDefs = `#graphql
     member
   }
 
+  """
+  The browser or phone making the request (DAN-30). Members don't sign in, so edit rights are
+  bound to the device an entry was created on. Only ever the caller's own device.
+  """
+  type ThisDevice {
+    "Random id the browser keeps. Send it as the X-Device-Id header on every request."
+    deviceId: ID!
+    "From the user agent, e.g. iPhone · Safari."
+    label: String!
+    "Name the user gave this device, e.g. Dang's phone."
+    nickname: String
+    firstSeenAt: String!
+  }
+
   "A name inside one splitter. Members do not need an account."
   type Member {
     id: ID!
@@ -156,6 +170,8 @@ export const typeDefs = `#graphql
     splitter(id: ID!): Splitter
     "The signed-in user's Event Manager events, newest first, to create a splitter from."
     eventManagerEvents: [EventManagerEvent!]!
+    "The device sending the X-Device-Id header, or null if it is not registered."
+    thisDevice: ThisDevice
   }
 
   type Mutation {
@@ -171,5 +187,12 @@ export const typeDefs = `#graphql
     splitterForEvent(eventManagerEventId: ID!, timeZone: String): Splitter!
     "Edit a splitter's details. Admin only."
     updateSplitter(id: ID!, input: UpdateSplitterInput!): Splitter!
+    """
+    Register this browser, once per page load. Returns the deviceId to keep, which differs from the
+    one sent when the browser's localStorage was cleared but its cookie still names a known device.
+    """
+    registerDevice(deviceId: ID!, label: String!): ThisDevice!
+    "Name this device, shown when someone tries to edit its entries elsewhere. Null or blank clears it."
+    setDeviceNickname(nickname: String): ThisDevice!
   }
 `;

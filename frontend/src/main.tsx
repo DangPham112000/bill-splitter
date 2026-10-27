@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { ClerkProvider } from '@clerk/react';
 import { apolloClient } from './lib/apolloClient';
+import { DeviceProvider } from './components/DeviceProvider';
 import { authEnabled, clerkPublishableKey } from './lib/auth';
 import App from './App';
 import './index.css';
 
 const app = (
   <ApolloProvider client={apolloClient}>
-    <App />
+    <DeviceProvider>
+      <App />
+    </DeviceProvider>
   </ApolloProvider>
 );
 

@@ -6,7 +6,7 @@ import { expressMiddleware } from '@as-integrations/express5';
 import { typeDefs } from './graphql/typeDefs.js';
 import { resolvers } from './graphql/resolvers.js';
 import { getHealth } from './health.js';
-import { contextFromAuthHeader, type Context } from './auth.js';
+import { contextFromRequest, type Context } from './auth.js';
 // Registers the Mongoose models so their indexes are built on connect.
 import './models/index.js';
 
@@ -30,7 +30,7 @@ async function startServer() {
     express.json(),
     expressMiddleware(server, {
       // Sign-in is optional: a missing or invalid token just means an anonymous request.
-      context: ({ req }) => contextFromAuthHeader(req.headers.authorization),
+      context: ({ req, res }) => contextFromRequest(req, res),
     }),
   );
 

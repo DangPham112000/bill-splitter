@@ -60,6 +60,14 @@ Indexes: `splitterId + normalizedName` unique among active members (so "Đặng 
 
 One browser or phone, identified by a random `deviceId` the client generates and keeps in local storage. Devices are global, not per splitter.
 
+How the id is kept (DAN-30, [`backend/src/device.ts`](../backend/src/device.ts), [`frontend/src/lib/device.ts`](../frontend/src/lib/device.ts)):
+
+- The browser creates a UUID on its first visit, stores it in `localStorage`, and sends it as the `X-Device-Id` header on every GraphQL request.
+- On every page load it calls `registerDevice(deviceId, label)`. The server upserts the device and keeps the id in an httpOnly cookie (`bs_device`, path `/graphql`, 400 days). If the browser sends a brand-new id while the cookie names a known device, `localStorage` was cleared, so the server returns the old id and the browser keeps that. This matters on iPhones: Safari wipes `localStorage` after 7 days without a visit, but not server-set cookies.
+- The label ("iPhone · Safari", "iPhone · Zalo", "Windows · Chrome") is built in the browser from the user agent and is for display only. The user can add a nickname ("Dang's phone"), asked when they first join a splitter on that device (DAN-41) and editable from the footer.
+- A `deviceId` works like a password for that device's entries: the API returns it only for the caller's own device (`ThisDevice`), never for anyone else's. Other devices are shown by label and nickname only.
+- Limits: private browsing, clearing the site's data (cookie included), or opening the link inside another app's browser (Zalo, Facebook) gives a new device. Entries from the old one become read-only there; a treasurer or the admin can still change them.
+
 | Field                       | Type   | Notes                                       |
 | --------------------------- | ------ | ------------------------------------------- |
 | `deviceId`                  | string | Unique                                      |
