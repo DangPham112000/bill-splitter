@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router';
 import { AccountMenu } from './AccountMenu';
+import { DeviceFooter } from './DeviceFooter';
 import { authEnabled } from '../lib/auth';
 
 export function Layout() {
@@ -14,6 +15,7 @@ export function Layout() {
       <main className="mx-auto max-w-xl px-4 pb-12">
         <Outlet />
       </main>
+      <DeviceFooter />
     </>
   );
 }

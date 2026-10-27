@@ -134,6 +134,7 @@ async function insertSplitter(
   fields: Omit<ConstructorParameters<typeof SplitterModel>[0] & object, 'inviteToken'>,
   adminName: string,
   members: StartingMember[],
+  deviceId: string | null,
 ): Promise<SplitterDoc> {
   const splitter = new SplitterModel({ ...fields, inviteToken: newInviteToken() });
   await saveOrBadInput(() => splitter.save());
@@ -145,6 +146,8 @@ async function insertSplitter(
           displayName: adminName,
           role: 'admin',
           userId: splitter.adminUserId,
+          // So the join screen (DAN-41) offers the admin's name first on this device.
+          createdByDeviceId: deviceId ?? undefined,
         },
         ...members.map((member) => ({ splitterId: splitter._id, ...member, role: 'member' })),
       ]),
@@ -270,6 +273,7 @@ export const splitterResolvers = {
         },
         adminName,
         [...linkedMembers, ...memberNames.map((displayName) => ({ displayName }))],
+        context.deviceId,
       );
     },
 
@@ -320,6 +324,7 @@ export const splitterResolvers = {
           },
           adminName,
           members,
+          context.deviceId,
         );
       } catch (error) {
         // Someone else (or a second click) created it a moment ago: open that one.

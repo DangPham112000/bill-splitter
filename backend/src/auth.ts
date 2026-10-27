@@ -1,5 +1,7 @@
 import { verifyToken } from '@clerk/backend';
+import type { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
+import { deviceIdFromCookie, deviceIdFromHeader } from './device.js';
 
 /**
  * What resolvers see in `context`. Sign-in is optional: members join splitters anonymously,
@@ -10,6 +12,12 @@ export interface Context {
   clerkId: string | null;
   /** The verified Clerk session token, forwarded when calling other ecosystem apps; null if anonymous. */
   sessionToken: string | null;
+  /** The browser's deviceId from the X-Device-Id header (DAN-30), or null. Not proof of registration. */
+  deviceId: string | null;
+  /** The deviceId in the httpOnly cookie, used to restore a device whose localStorage was cleared. */
+  cookieDeviceId: string | null;
+  /** For setting the device cookie. */
+  res: Response;
 }
 
 // Origins allowed to use a session token (the token's "azp" claim), comma-separated.
@@ -58,12 +66,16 @@ export function requireClerkId(context: Context): string {
   return context.clerkId;
 }
 
-/** Build the GraphQL context from the request's Authorization header. */
-export async function contextFromAuthHeader(header: string | undefined): Promise<Context> {
+/** Build the GraphQL context from the request's Authorization and X-Device-Id headers. */
+export async function contextFromRequest(req: Request, res: Response): Promise<Context> {
+  const header = req.headers.authorization;
   const clerkId = await getClerkIdFromAuthHeader(header);
   return {
     clerkId,
     sessionToken: clerkId && header ? header.slice('Bearer '.length).trim() : null,
+    deviceId: deviceIdFromHeader(req),
+    cookieDeviceId: deviceIdFromCookie(req),
+    res,
   };
 }
 
