@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { DEFAULT_CURRENCY, currencyValidator } from './money.js';
+import { DEFAULT_CURRENCY, cleanName, currencyValidator } from './money.js';
 
 export const SPLITTER_TYPES = ['trip', 'party', 'project', 'other'] as const;
 export const SPLITTER_STATUSES = ['open', 'locked'] as const;
@@ -45,6 +45,8 @@ const splitterSchema = new Schema(
 );
 
 splitterSchema.pre('validate', function () {
+  // Stored in NFC like member names, so "Đà Lạt" typed on any keyboard is the same text.
+  if (this.name) this.name = cleanName(this.name);
   if (this.startDate && this.endDate && this.endDate < this.startDate) {
     this.invalidate('endDate', 'endDate must not be before startDate');
   }

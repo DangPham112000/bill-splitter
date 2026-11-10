@@ -1,18 +1,8 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
+// Shared with the frontend, so names match the same way on both sides (DAN-32).
+import { cleanName, normalizeName } from '@bill-splitter/shared';
 
 export const MEMBER_ROLES = ['admin', 'treasurer', 'member'] as const;
-
-/** Case-, accent- and whitespace-insensitive form used to detect duplicate names. */
-export function normalizeName(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ');
-}
 
 const memberSchema = new Schema(
   {
@@ -31,7 +21,10 @@ const memberSchema = new Schema(
 );
 
 memberSchema.pre('validate', function () {
-  if (this.displayName) this.normalizedName = normalizeName(this.displayName);
+  if (this.displayName) {
+    this.displayName = cleanName(this.displayName);
+    this.normalizedName = normalizeName(this.displayName);
+  }
 });
 
 // One active member per name in a splitter. removedAt defaults to null, so $type matches it.

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery } from '@apollo/client/react';
-import { currencySymbol } from '@bill-splitter/shared';
+import { currencySymbol, nameMatches } from '@bill-splitter/shared';
 import {
   DEFAULT_EMOJI,
   GET_SPLITTER,
@@ -11,6 +11,7 @@ import {
   type Splitter,
 } from '../graphql/splitters';
 import { SignInPrompt } from '../components/SignInPrompt';
+import { inputClass } from '../lib/splitterForm';
 import { useAuthState } from '../lib/useAuthState';
 
 const ROLE_LABELS: Record<MemberRole, string | null> = {
@@ -86,10 +87,37 @@ export function SplitterPage() {
 
       {splitter.inviteToken && <InviteLink token={splitter.inviteToken} />}
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-slate-500">Members ({splitter.members.length})</h2>
+      <MemberList members={splitter.members} />
+    </div>
+  );
+}
+
+// Below this many members the whole list fits on a phone screen, so no search box.
+const SEARCH_FROM = 8;
+
+function MemberList({ members }: { members: Splitter['members'] }) {
+  const [query, setQuery] = useState('');
+  // Accent-insensitive: "dang" finds "Phạm Đăng" (DAN-32).
+  const shown = members.filter((member) => nameMatches(member.displayName, query));
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-medium text-slate-500">Members ({members.length})</h2>
+      {members.length >= SEARCH_FROM && (
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search members"
+          aria-label="Search members"
+          className={inputClass}
+        />
+      )}
+      {shown.length === 0 ? (
+        <p className="px-1 text-sm text-slate-500">No member matches "{query.trim()}".</p>
+      ) : (
         <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
-          {splitter.members.map((member) => (
+          {shown.map((member) => (
             <li key={member.id} className="flex items-center justify-between px-3 py-2.5">
               <span>{member.displayName}</span>
               {ROLE_LABELS[member.role] && (
@@ -100,8 +128,8 @@ export function SplitterPage() {
             </li>
           ))}
         </ul>
-      </section>
-    </div>
+      )}
+    </section>
   );
 }
 
