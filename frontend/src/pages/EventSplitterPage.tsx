@@ -4,6 +4,8 @@ import { useMutation } from '@apollo/client/react';
 import { MY_SPLITTERS, SPLITTER_FOR_EVENT, type Splitter } from '../graphql/splitters';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { useAuthState } from '../lib/useAuthState';
+import { Card, EmptyState, Loading } from '../components/ui';
+import { btn } from '../lib/styles';
 
 /**
  * Where Event Manager's "Split costs" button lands (/events/:eventId). Opens the event's
@@ -49,13 +51,20 @@ function OpenEventSplitter() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-3 pt-6">
-        <p className="text-slate-700">{error}</p>
-        <Link to="/" className="text-sm text-sky-700 hover:underline">
-          Go to my splitters
-        </Link>
-      </div>
+      <Card>
+        <EmptyState
+          icon="📅"
+          title="Could not open this event's splitter"
+          action={
+            <Link to="/" className={btn.secondary}>
+              Go to my splitters
+            </Link>
+          }
+        >
+          {error}
+        </EmptyState>
+      </Card>
     );
   }
-  return <p className="pt-6 text-slate-400">Opening the splitter for this event…</p>;
+  return <Loading label="Opening the splitter for this event…" />;
 }

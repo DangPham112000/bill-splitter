@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useDevice } from '../lib/deviceContext';
+import { btn, inputClass } from '../lib/styles';
 
 type Props = {
   onClose: () => void;
@@ -32,20 +33,20 @@ export function DeviceNicknameDialog({ onClose, reason }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-overlay p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="device-nickname-title"
     >
       <form
         onSubmit={submit}
-        className="flex w-full max-w-md flex-col gap-4 rounded-xl bg-white p-5 shadow-lg"
+        className="flex w-full max-w-md flex-col gap-4 rounded-3xl bg-card p-5 shadow-xl"
       >
         <div className="flex flex-col gap-1">
           <h2 id="device-nickname-title" className="text-lg font-semibold">
             {reason === 'join' ? 'Name this device' : 'This device'}
           </h2>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             {device ? <strong>{device.label}</strong> : 'This browser'}. What you add here can only
             be edited from this device, so give it a name your group will recognise.
           </p>
@@ -59,31 +60,23 @@ export function DeviceNicknameDialog({ onClose, reason }: Props) {
             onChange={(e) => setValue(e.target.value)}
             maxLength={50}
             placeholder="e.g. Dang's phone"
-            className="rounded-lg border border-slate-300 px-3 py-2"
+            className={inputClass}
           />
         </label>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Private browsing, clearing this site&apos;s data, or opening the link in another app (such
           as Zalo or Facebook) counts as a new device. Entries from the old one become read-only
           there; a treasurer or the admin can still change them.
         </p>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-slate-700 hover:bg-slate-100"
-          >
+          <button type="button" onClick={onClose} className={btn.ghost}>
             {reason === 'join' ? 'Skip' : 'Cancel'}
           </button>
-          <button
-            type="submit"
-            disabled={saving || !device}
-            className="rounded-lg bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving || !device} className={btn.primary}>
             Save
           </button>
         </div>

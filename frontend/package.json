@@ -13,6 +13,7 @@
     "@apollo/client": "^4.3.3",
     "@bill-splitter/shared": "workspace:*",
     "@clerk/react": "^6.18.1",
+    "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "graphql": "^16.14.2",
     "qrcode.react": "^4.2.0",
