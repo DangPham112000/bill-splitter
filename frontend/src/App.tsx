@@ -5,6 +5,7 @@ import { CreateSplitterPage } from './pages/CreateSplitterPage';
 import { SplitterPage } from './pages/SplitterPage';
 import { EditSplitterPage } from './pages/EditSplitterPage';
 import { EventSplitterPage } from './pages/EventSplitterPage';
+import { JoinPage } from './pages/JoinPage';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="new" element={<CreateSplitterPage />} />
           <Route path="s/:id" element={<SplitterPage />} />
           <Route path="s/:id/edit" element={<EditSplitterPage />} />
+          <Route path="join/:token" element={<JoinPage />} />
           <Route path="events/:eventId" element={<EventSplitterPage />} />
           <Route path="*" element={<p className="pt-6 text-slate-600">Page not found.</p>} />
         </Route>

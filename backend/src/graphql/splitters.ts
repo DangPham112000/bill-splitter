@@ -71,8 +71,18 @@ async function saveOrBadInput<T>(save: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Long enough that a join link cannot be guessed. */
+/** 128 random bits, so a join link cannot be guessed: 22 base64url characters. */
 const newInviteToken = () => randomBytes(16).toString('base64url');
+
+const INVITE_TOKEN = /^[A-Za-z0-9_-]{22}$/;
+
+/** The splitter a join link points to, or null for a malformed or old (regenerated) token. */
+export function findByInviteToken(token: string) {
+  return INVITE_TOKEN.test(token) ? SplitterModel.findOne({ inviteToken: token }) : null;
+}
+
+export const countMembers = (splitterId: mongoose.Types.ObjectId) =>
+  MemberModel.countDocuments({ splitterId, removedAt: null });
 
 /** "2026-12-24" → a Date at UTC midnight. Null and empty clear the date. */
 function parseDay(value: string | null | undefined, field: string): Date | null {
@@ -208,6 +218,18 @@ async function findReadable(id: string, clerkId: string | null): Promise<Splitte
   return splitter;
 }
 
+/** A splitter the caller administers; anyone else gets NOT_FOUND or FORBIDDEN. */
+async function findAdministered(id: string, context: Context): Promise<SplitterDoc> {
+  const clerkId = requireClerkId(context);
+  const splitter = await findReadable(id, clerkId);
+  if (splitter.adminUserId !== clerkId) {
+    throw new GraphQLError('Only the admin can change this splitter', {
+      extensions: { code: 'FORBIDDEN' },
+    });
+  }
+  return splitter;
+}
+
 export const splitterResolvers = {
   Query: {
     mySplitters: async (_parent: unknown, _args: unknown, context: Context) => {
@@ -225,6 +247,24 @@ export const splitterResolvers = {
 
     eventManagerEvents: (_parent: unknown, _args: unknown, context: Context) =>
       listEvents(requireSessionToken(context)),
+
+    // Public: holding the link is the permission. Shows only what the link preview shows.
+    invite: async (_parent: unknown, { token }: { token: string }, context: Context) => {
+      const splitter = await findByInviteToken(token);
+      if (!splitter) return null;
+      return {
+        name: splitter.name,
+        type: splitter.type,
+        coverEmoji: splitter.coverEmoji ?? null,
+        startDate: formatDay(splitter.startDate),
+        endDate: formatDay(splitter.endDate),
+        currency: splitter.currency,
+        status: splitter.status,
+        memberCount: await countMembers(splitter._id),
+        joiningEnabled: splitter.joiningEnabled,
+        splitterId: (await canRead(splitter, context.clerkId)) ? splitter._id.toString() : null,
+      };
+    },
   },
 
   Mutation: {
@@ -341,13 +381,7 @@ export const splitterResolvers = {
       { id, input }: { id: string; input: UpdateSplitterInput },
       context: Context,
     ) => {
-      const clerkId = requireClerkId(context);
-      const splitter = await findReadable(id, clerkId);
-      if (splitter.adminUserId !== clerkId) {
-        throw new GraphQLError('Only the admin can edit this splitter', {
-          extensions: { code: 'FORBIDDEN' },
-        });
-      }
+      const splitter = await findAdministered(id, context);
 
       if (input.name != null) splitter.name = input.name;
       if (input.type != null) splitter.type = input.type;
@@ -370,6 +404,24 @@ export const splitterResolvers = {
       }
 
       await saveOrBadInput(() => splitter.save());
+      return splitter;
+    },
+
+    regenerateInviteToken: async (_parent: unknown, { id }: { id: string }, context: Context) => {
+      const splitter = await findAdministered(id, context);
+      splitter.inviteToken = newInviteToken();
+      await splitter.save();
+      return splitter;
+    },
+
+    setJoiningEnabled: async (
+      _parent: unknown,
+      { id, enabled }: { id: string; enabled: boolean },
+      context: Context,
+    ) => {
+      const splitter = await findAdministered(id, context);
+      splitter.joiningEnabled = enabled;
+      await splitter.save();
       return splitter;
     },
   },

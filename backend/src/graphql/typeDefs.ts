@@ -79,8 +79,10 @@ export const typeDefs = `#graphql
     currency: String!
     hasInitialFund: Boolean!
     status: SplitterStatus!
-    "Secret part of the join link. Only the admin sees it."
+    "Secret part of the join link /join/<inviteToken>. Only the admin sees it."
     inviteToken: String
+    "False when the admin has turned the join link off."
+    joiningEnabled: Boolean!
     "Active members, the admin first."
     members: [Member!]!
     "True when the signed-in user created this splitter."
@@ -88,6 +90,25 @@ export const typeDefs = `#graphql
     "The Event Manager event it was created from, if any. Details were copied once, not synced."
     linkedEvent: LinkedEvent
     createdAt: String!
+  }
+
+  """
+  What anyone holding a join link may see before joining (DAN-36). Never the members' details
+  or the token's splitter id, unless the caller can already open the splitter.
+  """
+  type InvitePreview {
+    name: String!
+    type: SplitterType!
+    coverEmoji: String
+    startDate: String
+    endDate: String
+    currency: String!
+    status: SplitterStatus!
+    memberCount: Int!
+    "False when the admin has turned joining off; the link itself is still the current one."
+    joiningEnabled: Boolean!
+    "Set only when the caller is the admin or a linked member, so the page can open the splitter."
+    splitterId: ID
   }
 
   enum Participation {
@@ -170,6 +191,8 @@ export const typeDefs = `#graphql
     splitter(id: ID!): Splitter
     "The signed-in user's Event Manager events, newest first, to create a splitter from."
     eventManagerEvents: [EventManagerEvent!]!
+    "The splitter behind a join link. Null when the token is unknown, e.g. after the link was regenerated."
+    invite(token: String!): InvitePreview
     "The device sending the X-Device-Id header, or null if it is not registered."
     thisDevice: ThisDevice
   }
@@ -187,6 +210,10 @@ export const typeDefs = `#graphql
     splitterForEvent(eventManagerEventId: ID!, timeZone: String): Splitter!
     "Edit a splitter's details. Admin only."
     updateSplitter(id: ID!, input: UpdateSplitterInput!): Splitter!
+    "Make a new join link. The old one stops working at once. Admin only."
+    regenerateInviteToken(id: ID!): Splitter!
+    "Turn joining through the link on or off, keeping the link. Admin only."
+    setJoiningEnabled(id: ID!, enabled: Boolean!): Splitter!
     """
     Register this browser, once per page load. Returns the deviceId to keep, which differs from the
     one sent when the browser's localStorage was cleared but its cookie still names a known device.

@@ -19,6 +19,7 @@ export type Splitter = {
   hasInitialFund: boolean;
   status: 'open' | 'locked';
   inviteToken: string | null;
+  joiningEnabled: boolean;
   isAdmin: boolean;
   members: Member[];
   linkedEvent: LinkedEvent | null;
@@ -58,6 +59,7 @@ export const SPLITTER_FIELDS = gql`
     hasInitialFund
     status
     inviteToken
+    joiningEnabled
     isAdmin
     members {
       id
@@ -108,6 +110,59 @@ export const UPDATE_SPLITTER = gql`
   ${SPLITTER_FIELDS}
 `;
 
+export const REGENERATE_INVITE_TOKEN = gql`
+  mutation RegenerateInviteToken($id: ID!) {
+    regenerateInviteToken(id: $id) {
+      id
+      inviteToken
+      joiningEnabled
+    }
+  }
+`;
+
+export const SET_JOINING_ENABLED = gql`
+  mutation SetJoiningEnabled($id: ID!, $enabled: Boolean!) {
+    setJoiningEnabled(id: $id, enabled: $enabled) {
+      id
+      joiningEnabled
+    }
+  }
+`;
+
+/** What a join link shows before joining. */
+export type InvitePreview = {
+  name: string;
+  type: SplitterType;
+  coverEmoji: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  currency: string;
+  status: 'open' | 'locked';
+  memberCount: number;
+  joiningEnabled: boolean;
+  splitterId: string | null;
+};
+
+export const GET_INVITE = gql`
+  query Invite($token: String!) {
+    invite(token: $token) {
+      name
+      type
+      coverEmoji
+      startDate
+      endDate
+      currency
+      status
+      memberCount
+      joiningEnabled
+      splitterId
+    }
+  }
+`;
+
+/** The join link people share: /join/<token>. */
+export const joinLink = (token: string) => `${window.location.origin}/join/${token}`;
+
 export const SPLITTER_FOR_EVENT = gql`
   mutation SplitterForEvent($eventManagerEventId: ID!, $timeZone: String) {
     splitterForEvent(eventManagerEventId: $eventManagerEventId, timeZone: $timeZone) {
@@ -153,16 +208,5 @@ export const DEFAULT_EMOJI: Record<SplitterType, string> = {
   other: '🧾',
 };
 
-/** "24/12/2026", the way dates are written in Vietnam. */
-export function formatDay(day: string): string {
-  const [y, m, d] = day.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-export function formatDateRange(start: string | null, end: string | null): string | null {
-  if (start && end)
-    return start === end ? formatDay(start) : `${formatDay(start)} – ${formatDay(end)}`;
-  if (start) return `From ${formatDay(start)}`;
-  if (end) return `Until ${formatDay(end)}`;
-  return null;
-}
+// Shared with the backend, which writes the same dates into link previews.
+export { formatDateRange, formatDay } from '@bill-splitter/shared';
