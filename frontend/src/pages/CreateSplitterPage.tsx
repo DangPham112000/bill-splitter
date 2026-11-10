@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { cleanName, findSameName } from '@bill-splitter/shared';
 import {
   CREATE_SPLITTER,
   EVENT_MANAGER_EVENTS,
@@ -39,11 +40,7 @@ const rowsFromEvent = (event: EventManagerEvent): LinkedRow[] =>
     }));
 
 /** "Phạm Đăng" → one name per line, empty lines dropped. */
-const parseNames = (text: string) =>
-  text
-    .split('\n')
-    .map((name) => name.trim())
-    .filter(Boolean);
+const parseNames = (text: string) => text.split('\n').map(cleanName).filter(Boolean);
 
 export function CreateSplitterPage() {
   const { isLoaded, isSignedIn } = useAuthState();
@@ -76,7 +73,7 @@ function CreateSplitterForm() {
     }));
   const linkedMembers = rows
     .filter((row) => row.include && row.name.trim())
-    .map((row) => ({ name: row.name.trim(), clerkId: row.clerkId }));
+    .map((row) => ({ name: cleanName(row.name), clerkId: row.clerkId }));
 
   const { data: me } = useQuery<{ me: { name: string | null } | null }>(ME_NAME);
   // null until edited, so the account name can fill it in once it loads.
@@ -93,6 +90,13 @@ function CreateSplitterForm() {
 
   const submit = async (values: SplitterFormValues) => {
     if (!shownAdminName.trim()) return setError('Enter your name in this splitter');
+    // Same check as the backend: "Đăng" and "dang" would be one person to the group.
+    const clash = findSameName([
+      cleanName(shownAdminName),
+      ...linkedMembers.map((m) => m.name),
+      ...parseNames(memberNames),
+    ]);
+    if (clash) return setError(`"${clash.name}" is the same name as "${clash.sameAs}"`);
     setError(null);
     try {
       const { data } = await createSplitter({
@@ -106,7 +110,7 @@ function CreateSplitterForm() {
             endDate: values.endDate || null,
             currency: values.currency,
             hasInitialFund: values.hasInitialFund,
-            adminName: shownAdminName.trim(),
+            adminName: cleanName(shownAdminName),
             memberNames: parseNames(memberNames),
             eventManagerEventId: event?.id ?? null,
             linkedMembers,

@@ -47,7 +47,7 @@ A name inside one splitter. Members don't need an account. There is no User coll
 | Field               | Type                               | Notes                                                              |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------ |
 | `splitterId`        | ObjectId → Splitter                |                                                                    |
-| `displayName`       | string                             | As typed, up to 50 characters                                      |
+| `displayName`       | string                             | As typed, in NFC with single spaces, up to 50 characters           |
 | `normalizedName`    | string                             | Set automatically: lowercase, no accents, `đ` → `d`, single spaces |
 | `role`              | `admin` \| `treasurer` \| `member` | Admins and treasurers can adjust any transaction                   |
 | `userId`            | string                             | Optional Clerk user id, set when a signed-in user links the member |
@@ -55,6 +55,8 @@ A name inside one splitter. Members don't need an account. There is no User coll
 | `removedAt`         | Date \| null                       | Soft delete; history stays                                         |
 
 Indexes: `splitterId + normalizedName` unique among active members (so "Đặng Phạm" and "dang pham" clash, but a removed member's name can be reused), `splitterId + role`, `userId`.
+
+Name helpers live in `shared/src/names.ts` (DAN-32), so the frontend and backend agree: `cleanName` (what is stored), `normalizeName` (the key above, also used for search), `nameMatches` (search boxes: "dang" finds "Phạm Đăng") and `findSameName` (duplicate check before saving).
 
 ## Device
 

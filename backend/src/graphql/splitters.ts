@@ -4,7 +4,13 @@ import { GraphQLError } from 'graphql';
 import { requireClerkId, requireSessionToken, type Context } from '../auth.js';
 import { eventUrl, getEvent, listEvents, type EventManagerEvent } from '../eventManager.js';
 import { findUser } from '../coreUsers.js';
-import { daysFromEvent, descriptionFromEvent, splitterLookFromIcon } from '@bill-splitter/shared';
+import {
+  cleanName,
+  daysFromEvent,
+  descriptionFromEvent,
+  findSameName,
+  splitterLookFromIcon,
+} from '@bill-splitter/shared';
 import {
   DEFAULT_CURRENCY,
   MemberModel,
@@ -67,9 +73,6 @@ async function saveOrBadInput<T>(save: () => Promise<T>): Promise<T> {
 
 /** Long enough that a join link cannot be guessed. */
 const newInviteToken = () => randomBytes(16).toString('base64url');
-
-/** Names are stored in NFC, so the same name typed on different keyboards compares equal. */
-const cleanName = (name: string) => name.normalize('NFC').trim().replace(/\s+/g, ' ');
 
 /** "2026-12-24" → a Date at UTC midnight. Null and empty clear the date. */
 function parseDay(value: string | null | undefined, field: string): Date | null {
@@ -250,13 +253,12 @@ export const splitterResolvers = {
       }
 
       // "Đăng" and "dang" are the same person to the group, so they clash.
-      const seen = new Map<string, string>();
-      for (const name of [adminName, ...linkedMembers.map((m) => m.displayName), ...memberNames]) {
-        const key = normalizeName(name);
-        const first = seen.get(key);
-        if (first !== undefined) throw badInput(`"${name}" is the same name as "${first}"`);
-        seen.set(key, name);
-      }
+      const clash = findSameName([
+        adminName,
+        ...linkedMembers.map((m) => m.displayName),
+        ...memberNames,
+      ]);
+      if (clash) throw badInput(`"${clash.name}" is the same name as "${clash.sameAs}"`);
 
       return insertSplitter(
         {
