@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useState, type FormEvent } from 'react';
 import { useDevice } from '../lib/deviceContext';
 import { btn, inputClass } from '../lib/styles';
@@ -31,7 +32,8 @@ export function DeviceNicknameDialog({ onClose, reason }: Props) {
     }
   };
 
-  return (
+  // A portal, so a sticky parent (the desktop side column) cannot trap it under other parts.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-overlay p-4 sm:items-center"
       role="dialog"
@@ -81,6 +83,7 @@ export function DeviceNicknameDialog({ onClose, reason }: Props) {
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

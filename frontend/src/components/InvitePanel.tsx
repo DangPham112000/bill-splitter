@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -135,7 +136,8 @@ function QrDialog({ link, name, onClose }: { link: string; name: string; onClose
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // A portal, so a sticky parent (the desktop side column) cannot trap it under other parts.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -156,6 +158,7 @@ function QrDialog({ link, name, onClose }: { link: string; name: string; onClose
           Close
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
