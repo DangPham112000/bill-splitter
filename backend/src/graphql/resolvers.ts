@@ -4,6 +4,7 @@ import { findUser } from '../coreUsers.js';
 import { splitterResolvers } from './splitters.js';
 import { deviceResolvers } from './devices.js';
 import { memberResolvers } from './members.js';
+import { transactionResolvers } from './transactions.js';
 
 export const resolvers = {
   Query: {
@@ -27,8 +28,10 @@ export const resolvers = {
     ...splitterResolvers.Mutation,
     ...deviceResolvers.Mutation,
     ...memberResolvers.Mutation,
+    ...transactionResolvers.Mutation,
   },
-  Splitter: splitterResolvers.Splitter,
+  Splitter: { ...splitterResolvers.Splitter, ...transactionResolvers.Splitter },
+  Transaction: transactionResolvers.Transaction,
   Member: splitterResolvers.Member,
   EventManagerEvent: splitterResolvers.EventManagerEvent,
 };

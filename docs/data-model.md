@@ -122,9 +122,30 @@ Rules per type, enforced on validation:
 
 **Split.** `method` is `equal`, `exact` or `shares`. Each participant stores `memberId`, the resolved `amount`, and `shares` for the `shares` method. Amounts are stored for every method so balances never redo the rounding; they must add up exactly to the transaction `amount`, and a member appears at most once.
 
+The split is worked out by `splitAmount()` in [`shared/src/split.ts`](../shared/src/split.ts), which the expense form also runs for its live preview. `equal` and `shares` round down and hand the leftover minor units out one each, the payer first (when they share the cost), then in member order: 100.000 ₫ / 3 paid by the second member is 33.333 + 33.334 + 33.333. `exact` takes the typed amounts, which must add up to the total.
+
+**Adding an expense (DAN-43).** `addExpense` needs the caller to be a member (today: the member linked to their account; DAN-41 adds names picked on a device) and a registered device, which is saved as `createdByDeviceId`. The payer defaults to the caller; another payer needs `actForOthers`, and `paidFromFund` needs `manageFund` and a splitter with an initial fund. Category is one of `EXPENSE_CATEGORIES` in [`shared/src/categories.ts`](../shared/src/categories.ts) (food, transport, lodging, activities, shopping, other); `note` is optional free text. Each one is written to the AuditLog.
+
 Indexes: `splitterId + deletedAt + date` (the transaction list), `splitterId + createdByMemberId` ("my transactions"), `createdByDeviceId`.
 
 **Edit rights.** A member edits a transaction only from the device in `createdByDeviceId`; from another device the app shows which device created it. Admins and treasurers can adjust any transaction. (Enforced in the API, see DAN-47.)
+
+## Balances and settlement
+
+Computed on every read from the live transactions, never stored.
+
+**Balances (DAN-51).** `computeBalances()` in [`shared/src/balances.ts`](../shared/src/balances.ts) gives each member, positive meaning they should receive:
+
+```
++ expenses paid out of pocket   − share of all expenses (fund-paid ones too)
+− income received and held      + share of income
++ fund contributions paid in    − fund money held as its holder (collected − spent from the fund)
++ settlement transfers sent     − settlement transfers received
+```
+
+Until the fund has a holder (milestone 5), fund money stands alone as `fund`, signed like a balance. Member balances plus `fund` always sum to exactly 0; the function throws otherwise.
+
+**Settlement (DAN-52).** `settle()` in [`shared/src/settlement.ts`](../shared/src/settlement.ts) turns the balances into transfers. Members at 0 drop out. Up to 20 people with a non-zero balance, a bitmask search over subsets finds the most disjoint groups whose balances sum to 0; a group of k settles with k − 1 transfers, so this is the true minimum. Larger groups fall back to greedy (largest debtor pays largest creditor, at most n − 1 transfers). Input is sorted by id first, so the same balances always give the same transfers. Options: `roundTo` rounds each balance to the nearest step (1.000 ₫ for VND, one whole unit otherwise) and gives the leftover to one person (the hub, or whoever has the largest balance), so every transfer is round and `rounding` lists who gained or lost what; `viaMemberId` routes every payment through one member, usually the treasurer. An unheld fund takes part as a party of its own (a null member in the API).
 
 ## AuditLog
 

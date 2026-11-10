@@ -24,6 +24,8 @@ export type Splitter = {
   /** The signed-in user's role here, null when they are not a linked member. */
   myRole: MemberRole | null;
   members: Member[];
+  /** The caller's own member here, null until they join. */
+  me: Member | null;
   linkedEvent: LinkedEvent | null;
 };
 
@@ -65,6 +67,12 @@ export const SPLITTER_FIELDS = gql`
     isAdmin
     myRole
     members {
+      id
+      displayName
+      role
+      hasAccount
+    }
+    me {
       id
       displayName
       role
