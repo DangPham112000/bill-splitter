@@ -1,25 +1,17 @@
-import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery } from '@apollo/client/react';
-import { currencySymbol, nameMatches } from '@bill-splitter/shared';
+import { currencySymbol } from '@bill-splitter/shared';
 import {
   DEFAULT_EMOJI,
   GET_SPLITTER,
   SPLITTER_TYPE_LABELS,
   formatDateRange,
-  type MemberRole,
   type Splitter,
 } from '../graphql/splitters';
 import { InvitePanel } from '../components/InvitePanel';
 import { SignInPrompt } from '../components/SignInPrompt';
-import { inputClass } from '../lib/splitterForm';
+import { MemberList } from '../components/MemberList';
 import { useAuthState } from '../lib/useAuthState';
-
-const ROLE_LABELS: Record<MemberRole, string | null> = {
-  admin: 'Admin',
-  treasurer: 'Treasurer',
-  member: null,
-};
 
 export function SplitterPage() {
   const { id } = useParams();
@@ -95,48 +87,11 @@ export function SplitterPage() {
         />
       )}
 
-      <MemberList members={splitter.members} />
+      <MemberList
+        splitterId={splitter.id}
+        members={splitter.members}
+        canManage={splitter.isAdmin && splitter.status === 'open'}
+      />
     </div>
-  );
-}
-
-// Below this many members the whole list fits on a phone screen, so no search box.
-const SEARCH_FROM = 8;
-
-function MemberList({ members }: { members: Splitter['members'] }) {
-  const [query, setQuery] = useState('');
-  // Accent-insensitive: "dang" finds "Phạm Đăng" (DAN-32).
-  const shown = members.filter((member) => nameMatches(member.displayName, query));
-
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-slate-500">Members ({members.length})</h2>
-      {members.length >= SEARCH_FROM && (
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search members"
-          aria-label="Search members"
-          className={inputClass}
-        />
-      )}
-      {shown.length === 0 ? (
-        <p className="px-1 text-sm text-slate-500">No member matches "{query.trim()}".</p>
-      ) : (
-        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
-          {shown.map((member) => (
-            <li key={member.id} className="flex items-center justify-between px-3 py-2.5">
-              <span>{member.displayName}</span>
-              {ROLE_LABELS[member.role] && (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                  {ROLE_LABELS[member.role]}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
