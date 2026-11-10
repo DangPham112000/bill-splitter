@@ -3,6 +3,7 @@ import { getHealth } from '../health.js';
 import { findUser } from '../coreUsers.js';
 import { splitterResolvers } from './splitters.js';
 import { deviceResolvers } from './devices.js';
+import { memberResolvers } from './members.js';
 
 export const resolvers = {
   Query: {
@@ -22,7 +23,11 @@ export const resolvers = {
     ...splitterResolvers.Query,
     ...deviceResolvers.Query,
   },
-  Mutation: { ...splitterResolvers.Mutation, ...deviceResolvers.Mutation },
+  Mutation: {
+    ...splitterResolvers.Mutation,
+    ...deviceResolvers.Mutation,
+    ...memberResolvers.Mutation,
+  },
   Splitter: splitterResolvers.Splitter,
   Member: splitterResolvers.Member,
   EventManagerEvent: splitterResolvers.EventManagerEvent,

@@ -49,14 +49,14 @@ type UpdateSplitterInput = Partial<
 
 const MAX_STARTING_MEMBERS = 100;
 
-const badInput = (message: string) =>
+export const badInput = (message: string) =>
   new GraphQLError(message, { extensions: { code: 'BAD_USER_INPUT' } });
 
 const notFound = () =>
   new GraphQLError('Splitter not found', { extensions: { code: 'NOT_FOUND' } });
 
 /** Turn Mongoose validation errors into a message the form can show. */
-async function saveOrBadInput<T>(save: () => Promise<T>): Promise<T> {
+export async function saveOrBadInput<T>(save: () => Promise<T>): Promise<T> {
   try {
     return await save();
   } catch (error) {
@@ -187,7 +187,7 @@ async function openExisting(splitter: SplitterDoc, clerkId: string): Promise<Spl
   );
 }
 
-const isDuplicateKey = (error: unknown) => (error as { code?: number })?.code === 11000;
+export const isDuplicateKey = (error: unknown) => (error as { code?: number })?.code === 11000;
 
 /** A name not yet in `taken` (compared like the unique index does): "Minh", then "Minh 2". */
 function uniqueName(name: string, taken: Set<string>): string {
@@ -219,7 +219,7 @@ async function findReadable(id: string, clerkId: string | null): Promise<Splitte
 }
 
 /** A splitter the caller administers; anyone else gets NOT_FOUND or FORBIDDEN. */
-async function findAdministered(id: string, context: Context): Promise<SplitterDoc> {
+export async function findAdministered(id: string, context: Context): Promise<SplitterDoc> {
   const clerkId = requireClerkId(context);
   const splitter = await findReadable(id, clerkId);
   if (splitter.adminUserId !== clerkId) {

@@ -117,16 +117,20 @@ Indexes: `splitterId + deletedAt + date` (the transaction list), `splitterId + c
 
 ## AuditLog
 
-Append-only history of transaction changes.
+Append-only history of changes to transactions and members. Entries are never updated or deleted.
 
-| Field             | Type                             | Notes                                                    |
-| ----------------- | -------------------------------- | -------------------------------------------------------- |
-| `splitterId`      | ObjectId → Splitter              |                                                          |
-| `transactionId`   | ObjectId → Transaction           |                                                          |
-| `action`          | `create` \| `update` \| `delete` |                                                          |
-| `memberId`        | ObjectId → Member                | Who made the change                                      |
-| `deviceId`        | string → Device                  | Where it was made from                                   |
-| `before`, `after` | object \| null                   | Snapshots; `before` is null on create, `after` on delete |
-| `createdAt`       | Date                             |                                                          |
+| Field             | Type                             | Notes                                                                 |
+| ----------------- | -------------------------------- | --------------------------------------------------------------------- |
+| `splitterId`      | ObjectId → Splitter              |                                                                       |
+| `entity`          | `transaction` \| `member`        | Default `transaction` (entries from before DAN-37 have none)          |
+| `transactionId`   | ObjectId → Transaction           | Required when `entity` is `transaction`                               |
+| `targetMemberId`  | ObjectId → Member                | Required when `entity` is `member`: who was added, renamed or removed |
+| `action`          | `create` \| `update` \| `delete` |                                                                       |
+| `memberId`        | ObjectId → Member                | Who made the change                                                   |
+| `deviceId`        | string → Device                  | Where it was made from; required for transactions                     |
+| `before`, `after` | object \| null                   | Snapshots; `before` is null on create, `after` on delete              |
+| `createdAt`       | Date                             |                                                                       |
 
-Indexes: `transactionId + createdAt`, `splitterId + createdAt`.
+Indexes: `transactionId + createdAt`, `targetMemberId + createdAt`, `splitterId + createdAt`.
+
+**Member changes (DAN-37).** Only the admin adds, renames and removes members (`addMember`, `renameMember`, `removeMember`), and not on a locked splitter. Names follow the same rule as the unique index, so "dang" cannot be added next to "Đăng", while renaming "Dang" to "Đăng" is allowed. Removing is a soft delete (`removedAt`): the name leaves the member list and the join screen, and can be added again later. A member who pays, receives, shares or added a transaction that is not deleted cannot be removed (error code `MEMBER_IN_USE`), because that would change everyone's balance; reassigning their transactions may come later. The admin cannot be removed. Member snapshots hold `displayName`, `role` and `userId`.

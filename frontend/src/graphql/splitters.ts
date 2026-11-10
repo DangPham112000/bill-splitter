@@ -210,3 +210,37 @@ export const DEFAULT_EMOJI: Record<SplitterType, string> = {
 
 // Shared with the backend, which writes the same dates into link previews.
 export { formatDateRange, formatDay } from '@bill-splitter/shared';
+
+// Member changes return the splitter's new member list, which Apollo merges into the cache.
+const MEMBERS_RESULT = `
+  id
+  members {
+    id
+    displayName
+    role
+  }
+`;
+
+export const ADD_MEMBER = gql`
+  mutation AddMember($splitterId: ID!, $name: String!) {
+    addMember(splitterId: $splitterId, name: $name) {
+      ${MEMBERS_RESULT}
+    }
+  }
+`;
+
+export const RENAME_MEMBER = gql`
+  mutation RenameMember($splitterId: ID!, $memberId: ID!, $name: String!) {
+    renameMember(splitterId: $splitterId, memberId: $memberId, name: $name) {
+      ${MEMBERS_RESULT}
+    }
+  }
+`;
+
+export const REMOVE_MEMBER = gql`
+  mutation RemoveMember($splitterId: ID!, $memberId: ID!) {
+    removeMember(splitterId: $splitterId, memberId: $memberId) {
+      ${MEMBERS_RESULT}
+    }
+  }
+`;

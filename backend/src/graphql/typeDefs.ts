@@ -219,6 +219,19 @@ export const typeDefs = `#graphql
     one sent when the browser's localStorage was cleared but its cookie still names a known device.
     """
     registerDevice(deviceId: ID!, label: String!): ThisDevice!
+    """
+    Add a member by name, so they can pick it when they join (DAN-37). The name must not match an
+    active member's ignoring case and accents. Admin only, not on a locked splitter.
+    """
+    addMember(splitterId: ID!, name: String!): Splitter!
+    "Fix a member's name, e.g. add diacritics. Admin only, not on a locked splitter."
+    renameMember(splitterId: ID!, memberId: ID!, name: String!): Splitter!
+    """
+    Remove a member, so the name can no longer be picked on join. Refused with MEMBER_IN_USE while
+    they pay, receive, share or added a transaction, because removing them would change balances.
+    The admin cannot be removed. Admin only, not on a locked splitter.
+    """
+    removeMember(splitterId: ID!, memberId: ID!): Splitter!
     "Name this device, shown when someone tries to edit its entries elsewhere. Null or blank clears it."
     setDeviceNickname(nickname: String): ThisDevice!
   }
