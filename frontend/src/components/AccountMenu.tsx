@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { SignInButton, UserButton, useAuth } from '@clerk/react';
+import { btn } from '../lib/styles';
 
 /**
  * Optional sign-in: a "Sign in" button when signed out, the Clerk user menu when signed in.
  * Never blocks the page, because members use splitters without an account.
  */
-export function AccountMenu() {
+export function AccountMenu({ showName = false }: { showName?: boolean }) {
   const { isLoaded, isSignedIn } = useAuth();
   const client = useApolloClient();
 
@@ -16,12 +17,12 @@ export function AccountMenu() {
   }, [client, isLoaded, isSignedIn]);
 
   if (!isLoaded) return null;
-  if (isSignedIn) return <UserButton />;
+  if (isSignedIn) return <UserButton showName={showName} />;
   return (
     <SignInButton mode="modal">
       <button
         type="button"
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+        className={`${btn.secondary} py-1.5 text-sm ${showName ? 'w-full' : ''}`}
       >
         Sign in
       </button>

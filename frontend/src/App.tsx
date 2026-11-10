@@ -6,6 +6,7 @@ import { SplitterPage } from './pages/SplitterPage';
 import { EditSplitterPage } from './pages/EditSplitterPage';
 import { EventSplitterPage } from './pages/EventSplitterPage';
 import { JoinPage } from './pages/JoinPage';
+import { Card, EmptyState } from './components/ui';
 
 export default function App() {
   return (
@@ -18,9 +19,19 @@ export default function App() {
           <Route path="s/:id/edit" element={<EditSplitterPage />} />
           <Route path="join/:token" element={<JoinPage />} />
           <Route path="events/:eventId" element={<EventSplitterPage />} />
-          <Route path="*" element={<p className="pt-6 text-slate-600">Page not found.</p>} />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function NotFound() {
+  return (
+    <Card>
+      <EmptyState icon="🧭" title="Page not found">
+        This address does not lead anywhere. Check the link or go back to your splitters.
+      </EmptyState>
+    </Card>
   );
 }

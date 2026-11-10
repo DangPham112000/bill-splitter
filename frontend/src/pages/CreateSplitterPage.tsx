@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { cleanName, findSameName } from '@bill-splitter/shared';
@@ -13,6 +13,8 @@ import {
 import { Field, SplitterForm } from '../components/SplitterForm';
 import { emptySplitterForm, inputClass, type SplitterFormValues } from '../lib/splitterForm';
 import { SignInPrompt } from '../components/SignInPrompt';
+import { Icon } from '../components/ui';
+import { btn } from '../lib/styles';
 import { useAuthState } from '../lib/useAuthState';
 import { eventDayLabel, formFromEvent } from '../lib/eventPrefill';
 
@@ -124,8 +126,13 @@ function CreateSplitterForm() {
   };
 
   return (
-    <div className="flex flex-col gap-4 pt-2">
-      <h1 className="text-2xl font-semibold">New splitter</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex items-center gap-1">
+        <Link to={'/'} aria-label="Back" className={`${btn.icon} -ml-2`}>
+          <Icon name="back" />
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight">New splitter</h1>
+      </div>
       <EventPicker
         events={events.data?.eventManagerEvents}
         loading={events.loading}
@@ -153,7 +160,7 @@ function CreateSplitterForm() {
         </Field>
         {event && rows.length > 0 && (
           <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1.5 text-sm font-medium text-slate-700">
+            <legend className="mb-1.5 text-sm font-medium text-foreground/90">
               People from the event ({linkedMembers.length})
             </legend>
             <ul className="flex flex-col gap-2">
@@ -161,7 +168,7 @@ function CreateSplitterForm() {
                 <li key={row.clerkId} className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    className="h-4 w-4"
+                    className="h-4 w-4 accent-primary"
                     checked={row.include}
                     onChange={(e) => setRow(index, { include: e.target.checked })}
                     aria-label={`Add ${row.name}`}
@@ -174,12 +181,12 @@ function CreateSplitterForm() {
                     disabled={!row.include}
                   />
                   {row.interested && (
-                    <span className="shrink-0 text-xs text-slate-500">Interested</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">Interested</span>
                   )}
                 </li>
               ))}
             </ul>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               Their names are tied to their accounts, so the splitter shows up in their list when
               they sign in.
             </span>
@@ -221,7 +228,7 @@ function EventPicker({
   else if (!events?.length) hint = 'You have no events in Event Manager yet.';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+    <div className="rounded-2xl border border-primary/25 bg-primary-soft p-4">
       <Field label="Start from an Event Manager event (optional)" hint={hint}>
         <select
           className={inputClass}

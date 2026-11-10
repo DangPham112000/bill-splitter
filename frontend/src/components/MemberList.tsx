@@ -9,7 +9,8 @@ import {
   type Member,
   type MemberRole,
 } from '../graphql/splitters';
-import { inputClass } from '../lib/splitterForm';
+import { btn, cardClass, inputClass } from '../lib/styles';
+import { Avatar, SectionTitle } from './ui';
 
 const ROLE_LABELS: Record<MemberRole, string | null> = {
   admin: 'Admin',
@@ -18,16 +19,15 @@ const ROLE_LABELS: Record<MemberRole, string | null> = {
 };
 
 const ROLE_BADGES: Record<MemberRole, string> = {
-  admin: 'bg-sky-100 text-sky-800',
-  treasurer: 'bg-amber-100 text-amber-800',
-  member: 'bg-slate-100 text-slate-600',
+  admin: 'bg-primary-soft text-primary-soft-foreground',
+  treasurer: 'bg-warning-soft text-warning',
+  member: 'bg-muted text-muted-foreground',
 };
 
 // Below this many members the whole list fits on a phone screen, so no search box.
 const SEARCH_FROM = 8;
 
-const smallButton =
-  'rounded-lg border border-slate-300 px-2.5 py-1 text-sm hover:bg-slate-50 disabled:opacity-50';
+const smallButton = btn.small;
 
 type Props = {
   splitterId: string;
@@ -50,7 +50,7 @@ export function MemberList({ splitterId, members, canManage }: Props) {
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium text-slate-500">Members ({members.length})</h2>
+      <SectionTitle>Members ({members.length})</SectionTitle>
       {members.length >= SEARCH_FROM && (
         <input
           type="search"
@@ -62,9 +62,9 @@ export function MemberList({ splitterId, members, canManage }: Props) {
         />
       )}
       {shown.length === 0 ? (
-        <p className="px-1 text-sm text-slate-500">No member matches "{query.trim()}".</p>
+        <p className="px-1 text-sm text-muted-foreground">No member matches "{query.trim()}".</p>
       ) : (
-        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+        <ul className={`${cardClass} divide-y divide-border overflow-hidden`}>
           {shown.map((member) =>
             editingId === member.id ? (
               <RenameRow
@@ -87,7 +87,7 @@ export function MemberList({ splitterId, members, canManage }: Props) {
         </ul>
       )}
       {canManage && (
-        <p className="px-1 text-xs text-slate-500">
+        <p className="px-1 text-xs text-muted-foreground">
           Treasurers can change anyone's transactions, enter them for others and manage the fund.
           Only members who signed in can be treasurer.
         </p>
@@ -140,55 +140,56 @@ function MemberRow({
   };
 
   return (
-    <li className="flex flex-col gap-1 px-3 py-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="min-w-0 break-words">{member.displayName}</span>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {label && (
-            <span className={`rounded-full px-2 py-0.5 text-xs ${ROLE_BADGES[member.role]}`}>
-              {label}
-            </span>
+    <li className="flex flex-col gap-2 px-3 py-3">
+      <div className="flex items-center gap-3">
+        <Avatar name={member.displayName} size="sm" />
+        <span className="min-w-0 flex-1 break-words">{member.displayName}</span>
+        {label && (
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_BADGES[member.role]}`}
+          >
+            {label}
+          </span>
+        )}
+      </div>
+      {canManage && (
+        <div className="flex flex-wrap gap-1.5 pl-11">
+          <button type="button" onClick={onRename} className={smallButton}>
+            Rename
+          </button>
+          {member.role !== 'admin' && (
+            <button
+              type="button"
+              onClick={toggleTreasurer}
+              // A treasurer needs an account, so their rights follow them to any device.
+              disabled={settingRole.loading || (!isTreasurer && !member.hasAccount)}
+              title={
+                !isTreasurer && !member.hasAccount
+                  ? 'They need to sign in and join with this name first'
+                  : undefined
+              }
+              className={smallButton}
+            >
+              {settingRole.loading
+                ? 'Saving…'
+                : isTreasurer
+                  ? 'Remove treasurer'
+                  : 'Make treasurer'}
+            </button>
           )}
-          {canManage && (
-            <>
-              <button type="button" onClick={onRename} className={smallButton}>
-                Rename
-              </button>
-              {member.role !== 'admin' && (
-                <button
-                  type="button"
-                  onClick={toggleTreasurer}
-                  // A treasurer needs an account, so their rights follow them to any device.
-                  disabled={settingRole.loading || (!isTreasurer && !member.hasAccount)}
-                  title={
-                    !isTreasurer && !member.hasAccount
-                      ? 'They need to sign in and join with this name first'
-                      : undefined
-                  }
-                  className={smallButton}
-                >
-                  {settingRole.loading
-                    ? 'Saving…'
-                    : isTreasurer
-                      ? 'Remove treasurer'
-                      : 'Make treasurer'}
-                </button>
-              )}
-              {member.role !== 'admin' && (
-                <button
-                  type="button"
-                  onClick={confirmRemove}
-                  disabled={removing.loading}
-                  className={`${smallButton} text-red-700`}
-                >
-                  {removing.loading ? 'Removing…' : 'Remove'}
-                </button>
-              )}
-            </>
+          {member.role !== 'admin' && (
+            <button
+              type="button"
+              onClick={confirmRemove}
+              disabled={removing.loading}
+              className={`${smallButton} text-destructive`}
+            >
+              {removing.loading ? 'Removing…' : 'Remove'}
+            </button>
           )}
         </div>
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      )}
+      {error && <p className="pl-11 text-sm text-destructive">{error}</p>}
     </li>
   );
 }
@@ -233,13 +234,13 @@ function RenameRow({
           aria-label={`New name for ${member.displayName}`}
           className={inputClass}
         />
-        {clash && <p className="text-sm text-amber-700">Same name as "{clash.displayName}".</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {clash && <p className="text-sm text-warning">Same name as "{clash.displayName}".</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={renaming.loading || !cleanName(name) || Boolean(clash)}
-            className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+            className={`${btn.primary} px-3 py-1.5 text-sm`}
           >
             {renaming.loading ? 'Saving…' : 'Save'}
           </button>
@@ -284,21 +285,21 @@ function AddMemberForm({ splitterId, members }: { splitterId: string; members: M
         <button
           type="submit"
           disabled={adding.loading || !cleanName(name) || Boolean(clash)}
-          className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+          className={`${btn.primary} px-3 py-2 text-sm`}
         >
           {adding.loading ? 'Adding…' : 'Add'}
         </button>
       </div>
       {clash ? (
-        <p className="px-1 text-sm text-amber-700">
+        <p className="px-1 text-sm text-warning">
           "{clash.displayName}" is already in this splitter.
         </p>
       ) : (
-        <p className="px-1 text-xs text-slate-500">
+        <p className="px-1 text-xs text-muted-foreground">
           They pick this name when they open the invite link.
         </p>
       )}
-      {error && <p className="px-1 text-sm text-red-600">{error}</p>}
+      {error && <p className="px-1 text-sm text-destructive">{error}</p>}
     </form>
   );
 }

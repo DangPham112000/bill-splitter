@@ -23,5 +23,4 @@ export const emptySplitterForm: SplitterFormValues = {
   hasInitialFund: false,
 };
 
-export const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500';
+export { inputClass } from './styles';

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { REGENERATE_INVITE_TOKEN, SET_JOINING_ENABLED, joinLink } from '../graphql/splitters';
+import { btn, inputClass } from '../lib/styles';
+import { Icon } from './ui';
 
 type Props = {
   splitterId: string;
@@ -10,8 +12,7 @@ type Props = {
   joiningEnabled: boolean;
 };
 
-const buttonClass =
-  'rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-800 hover:bg-sky-100 disabled:opacity-50';
+const buttonClass = `${btn.secondary} px-3 py-1.5 text-sm`;
 
 /** The admin's join link: copy, share to Zalo or Messenger, QR code, regenerate, turn off (DAN-36). */
 export function InvitePanel({ splitterId, splitterName, token, joiningEnabled }: Props) {
@@ -54,10 +55,13 @@ export function InvitePanel({ splitterId, splitterName, token, joiningEnabled }:
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3 text-left">
+    <section className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary-soft p-4 text-left">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-sky-800">Invite link</h2>
-        <label className="flex items-center gap-2 text-sm text-sky-800">
+        <h2 className="flex items-center gap-2 font-semibold text-primary-soft-foreground">
+          <Icon name="share" className="h-4 w-4" />
+          Invite people
+        </h2>
+        <label className="flex items-center gap-2 text-sm text-primary-soft-foreground">
           <input
             type="checkbox"
             checked={joiningEnabled}
@@ -67,7 +71,7 @@ export function InvitePanel({ splitterId, splitterName, token, joiningEnabled }:
                 () => {},
               )
             }
-            className="h-4 w-4 accent-sky-600"
+            className="h-4 w-4 accent-primary"
           />
           Joining on
         </label>
@@ -81,13 +85,9 @@ export function InvitePanel({ splitterId, splitterName, token, joiningEnabled }:
               value={link}
               aria-label="Invite link"
               onFocus={(e) => e.target.select()}
-              className="min-w-0 flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
+              className={`${inputClass} min-w-0 flex-1 py-2 text-sm`}
             />
-            <button
-              type="button"
-              onClick={copy}
-              className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
-            >
+            <button type="button" onClick={copy} className={`${btn.primary} px-3 py-2 text-sm`}>
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
@@ -109,18 +109,18 @@ export function InvitePanel({ splitterId, splitterName, token, joiningEnabled }:
               {regenerating.loading ? 'Making a new link…' : 'New link'}
             </button>
           </div>
-          <p className="text-xs text-sky-700">
+          <p className="text-xs text-primary-soft-foreground/80">
             Anyone with this link can join. Make a new link if it reached the wrong people.
           </p>
         </>
       ) : (
-        <p className="text-sm text-sky-800">
+        <p className="text-sm text-primary-soft-foreground">
           Joining is off: the link opens but nobody new can join. Members already in are not
           affected.
         </p>
       )}
 
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {showQr && <QrDialog link={link} name={splitterName} onClose={() => setShowQr(false)} />}
     </section>
@@ -141,20 +141,18 @@ function QrDialog({ link, name, onClose }: { link: string; name: string; onClose
       aria-modal="true"
       aria-label={`QR code to join ${name}`}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl bg-white p-6 text-center"
+        className="flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-card p-6 text-center shadow-xl"
       >
         <h2 className="text-lg font-semibold break-words">{name}</h2>
-        <QRCodeSVG value={link} size={512} marginSize={2} className="h-auto w-full max-w-72" />
-        <p className="text-sm text-slate-500">Scan with the phone camera or Zalo to join.</p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-medium hover:bg-slate-50"
-        >
+        <div className="rounded-2xl bg-white p-3">
+          <QRCodeSVG value={link} size={512} marginSize={1} className="h-auto w-full max-w-72" />
+        </div>
+        <p className="text-sm text-muted-foreground">Scan with the phone camera or Zalo to join.</p>
+        <button type="button" onClick={onClose} className={`${btn.secondary} w-full`}>
           Close
         </button>
       </div>

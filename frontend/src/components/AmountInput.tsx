@@ -124,14 +124,14 @@ export default function AmountInput({
 
   return (
     <div className="flex flex-col gap-2 text-left">
-      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="text-sm font-medium text-foreground/90">
         {label}
       </label>
       <div
-        className={`flex items-center rounded-lg border bg-white px-3 focus-within:ring-2 ${
+        className={`flex items-center rounded-xl border bg-card px-3 focus-within:ring-2 ${
           showError
-            ? 'border-red-400 focus-within:ring-red-200'
-            : 'border-slate-300 focus-within:ring-sky-200'
+            ? 'border-destructive focus-within:ring-destructive/25'
+            : 'border-input focus-within:border-primary focus-within:ring-ring/30'
         }`}
       >
         <input
@@ -152,14 +152,14 @@ export default function AmountInput({
           aria-describedby={`${id}-help`}
           className="min-w-0 flex-1 bg-transparent py-3 text-right text-xl font-semibold tabular-nums outline-none"
         />
-        <span className="pl-2 text-lg text-slate-500">{currencySymbol(currency)}</span>
+        <span className="pl-2 text-lg text-muted-foreground">{currencySymbol(currency)}</span>
         <button
           type="button"
           onClick={() => {
             setLetters(!letters);
             inputRef.current?.focus();
           }}
-          className="ml-2 rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100"
+          className="ml-2 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
           aria-label={letters ? 'Use number keypad' : 'Use letter keyboard for shorthands'}
         >
           {letters ? '123' : 'abc'}
@@ -167,7 +167,7 @@ export default function AmountInput({
       </div>
       <p
         id={`${id}-help`}
-        className={`min-h-5 text-sm ${showError ? 'text-red-600' : 'text-slate-500'}`}
+        className={`min-h-5 text-sm ${showError ? 'text-destructive' : 'text-muted-foreground'}`}
       >
         {showError ? `Enter an amount like ${example}` : hint}
       </p>
@@ -178,7 +178,7 @@ export default function AmountInput({
               key={chip.label}
               type="button"
               onClick={() => addQuick(chip.amount)}
-              className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 active:bg-slate-200"
+              className="rounded-full border border-input bg-card px-3 py-1 text-sm text-foreground/90 hover:bg-muted active:bg-accent"
             >
               {chip.label}
             </button>

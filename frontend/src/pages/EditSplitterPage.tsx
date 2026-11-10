@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { GET_SPLITTER, UPDATE_SPLITTER, type Splitter } from '../graphql/splitters';
 import { SplitterForm } from '../components/SplitterForm';
 import type { SplitterFormValues } from '../lib/splitterForm';
 import { SignInPrompt } from '../components/SignInPrompt';
+import { Icon, Loading } from '../components/ui';
+import { btn } from '../lib/styles';
 import { useAuthState } from '../lib/useAuthState';
 
 export function EditSplitterPage() {
@@ -18,11 +20,11 @@ export function EditSplitterPage() {
   });
   const [updateSplitter, { loading: saving }] = useMutation(UPDATE_SPLITTER);
 
-  if (!isLoaded || loading) return <p className="pt-6 text-slate-400">Loading…</p>;
+  if (!isLoaded || loading) return <Loading />;
   if (!isSignedIn) return <SignInPrompt message="Sign in to edit this splitter." />;
   const splitter = data?.splitter;
   if (!splitter?.isAdmin) {
-    return <p className="pt-6 text-slate-600">Only the admin can edit this splitter.</p>;
+    return <p className="pt-6 text-muted-foreground">Only the admin can edit this splitter.</p>;
   }
 
   const submit = async (values: SplitterFormValues) => {
@@ -50,8 +52,13 @@ export function EditSplitterPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 pt-2">
-      <h1 className="text-2xl font-semibold">Edit splitter</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex items-center gap-1">
+        <Link to={`/s/${splitter.id}`} aria-label="Back" className={`${btn.icon} -ml-2`}>
+          <Icon name="back" />
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight">Edit splitter</h1>
+      </div>
       <SplitterForm
         initial={{
           name: splitter.name,

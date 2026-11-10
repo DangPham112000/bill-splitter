@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { SPLITTER_TYPE_LABELS, type SplitterType } from '../graphql/splitters';
-import { inputClass, type SplitterFormValues } from '../lib/splitterForm';
+import { type SplitterFormValues } from '../lib/splitterForm';
+import { btn, cardClass, inputClass } from '../lib/styles';
 
 const EMOJIS = ['🏖️', '⛰️', '✈️', '🏕️', '🎉', '🎂', '🍻', '🍜', '💼', '🏠'];
 
@@ -18,9 +19,9 @@ export function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5 text-left">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-foreground/90">{label}</span>
       {children}
-      {hint && <span className="text-xs text-slate-500">{hint}</span>}
+      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
     </label>
   );
 }
@@ -92,7 +93,7 @@ export function SplitterForm({
       </Field>
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-1.5 text-sm font-medium text-slate-700">Type</legend>
+        <legend className="mb-1.5 text-sm font-medium text-foreground/90">Type</legend>
         <div className="grid grid-cols-4 gap-2">
           {(Object.keys(SPLITTER_TYPE_LABELS) as SplitterType[]).map((type) => (
             <button
@@ -100,10 +101,10 @@ export function SplitterForm({
               type="button"
               onClick={() => set('type', type)}
               aria-pressed={values.type === type}
-              className={`rounded-lg border px-2 py-2 text-sm ${
+              className={`rounded-xl border px-2 py-2.5 text-sm transition-colors ${
                 values.type === type
-                  ? 'border-sky-600 bg-sky-50 font-medium text-sky-700'
-                  : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  ? 'border-primary bg-primary-soft font-medium text-primary-soft-foreground'
+                  : 'border-input bg-card hover:bg-muted'
               }`}
             >
               {SPLITTER_TYPE_LABELS[type]}
@@ -113,7 +114,7 @@ export function SplitterForm({
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-1.5 text-sm font-medium text-slate-700">
+        <legend className="mb-1.5 text-sm font-medium text-foreground/90">
           Cover emoji (optional)
         </legend>
         <div className="flex flex-wrap gap-1.5">
@@ -123,15 +124,17 @@ export function SplitterForm({
               type="button"
               onClick={() => set('coverEmoji', values.coverEmoji === emoji ? '' : emoji)}
               aria-pressed={values.coverEmoji === emoji}
-              className={`h-10 w-10 rounded-lg border text-xl ${
-                values.coverEmoji === emoji ? 'border-sky-600 bg-sky-50' : 'border-slate-200'
+              className={`h-11 w-11 rounded-xl border text-xl transition-colors ${
+                values.coverEmoji === emoji
+                  ? 'border-primary bg-primary-soft'
+                  : 'border-input bg-card hover:bg-muted'
               }`}
             >
               {emoji}
             </button>
           ))}
           <input
-            className="h-10 w-16 rounded-lg border border-slate-300 text-center text-xl"
+            className="h-11 w-16 rounded-xl border border-input bg-card text-center text-xl outline-none focus:border-primary"
             value={EMOJIS.includes(values.coverEmoji) ? '' : values.coverEmoji}
             onChange={(e) => set('coverEmoji', e.target.value.trim())}
             aria-label="Other emoji"
@@ -178,16 +181,16 @@ export function SplitterForm({
         </select>
       </Field>
 
-      <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left">
+      <label className={`${cardClass} flex items-start gap-3 p-4 text-left`}>
         <input
           type="checkbox"
-          className="mt-1 h-4 w-4"
+          className="mt-1 h-4 w-4 accent-primary"
           checked={values.hasInitialFund}
           onChange={(e) => set('hasInitialFund', e.target.checked)}
         />
         <span>
-          <span className="block text-sm font-medium text-slate-700">Initial fund</span>
-          <span className="block text-xs text-slate-500">
+          <span className="block text-sm font-medium text-foreground/90">Initial fund</span>
+          <span className="block text-xs text-muted-foreground">
             Everyone pays into a shared fund up front, and expenses can be paid from it.
           </span>
         </span>
@@ -195,13 +198,9 @@ export function SplitterForm({
 
       {children}
 
-      {shownError && <p className="text-sm text-red-600">{shownError}</p>}
+      {shownError && <p className="text-sm text-destructive">{shownError}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-sky-600 px-4 py-3 font-medium text-white hover:bg-sky-700 disabled:opacity-60"
-      >
+      <button type="submit" disabled={submitting} className={`${btn.primary} py-3`}>
         {submitting ? 'Saving…' : submitLabel}
       </button>
     </form>
