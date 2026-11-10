@@ -87,7 +87,7 @@ function SplitterView({ splitter }: { splitter: Splitter }) {
         <div
           role="tablist"
           aria-label="Splitter sections"
-          className="sticky top-14 z-20 -mx-4 bg-background/85 px-4 py-2 backdrop-blur lg:static lg:mx-0 lg:bg-transparent lg:p-0"
+          className="sticky top-14 z-20 -mx-4 bg-background/85 px-4 py-2 backdrop-blur lg:static lg:z-auto lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
         >
           <div className="flex rounded-xl bg-muted p-1">
             {tabs.map((t) => (
