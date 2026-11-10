@@ -49,6 +49,11 @@ export function SplitterPage() {
               .filter(Boolean)
               .join(' · ')}
           </p>
+          {splitter.myRole === 'treasurer' && (
+            <p className="mt-1 text-sm text-amber-800">
+              You are a treasurer: you can change anyone's transactions and manage the fund.
+            </p>
+          )}
         </div>
         {splitter.isAdmin && (
           <Link

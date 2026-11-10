@@ -52,12 +52,23 @@ A name inside one splitter. Members don't need an account. There is no User coll
 | `splitterId`        | ObjectId → Splitter                |                                                                    |
 | `displayName`       | string                             | As typed, in NFC with single spaces, up to 50 characters           |
 | `normalizedName`    | string                             | Set automatically: lowercase, no accents, `đ` → `d`, single spaces |
-| `role`              | `admin` \| `treasurer` \| `member` | Admins and treasurers can adjust any transaction                   |
+| `role`              | `admin` \| `treasurer` \| `member` | See "Roles" below                                                  |
 | `userId`            | string                             | Optional Clerk user id, set when a signed-in user links the member |
 | `createdByDeviceId` | string                             | Device that created the name, so it can be offered there again     |
 | `removedAt`         | Date \| null                       | Soft delete; history stays                                         |
 
 Indexes: `splitterId + normalizedName` unique among active members (so "Đặng Phạm" and "dang pham" clash, but a removed member's name can be reused), `splitterId + role`, `userId`.
+
+**Roles** (DAN-38). One admin, set at creation and never changed. The admin can make any member who is linked to an account (`userId` set) treasurer, and turn them back into a member, with `setMemberRole`; both are written to the AuditLog. Treasurer rights need sign-in so they follow the account to any device and survive a cleared browser. The table lives in `backend/src/permissions.ts` (`PERMISSIONS`, `roleOf`, `requirePermission`) and every new mutation checks it there:
+
+| Action                                 | Member      | Treasurer | Admin |
+| -------------------------------------- | ----------- | --------- | ----- |
+| Add and edit own transactions (device) | ✓           | ✓         | ✓     |
+| Edit or delete anyone's transactions   |             | ✓         | ✓     |
+| Enter transactions on behalf of others |             | ✓         | ✓     |
+| Manage fund contributions              |             | ✓         | ✓     |
+| Mark settlement transfers as done      | payer/payee | ✓         | ✓     |
+| Add/remove members, grant treasurer    |             |           | ✓     |
 
 Name helpers live in `shared/src/names.ts` (DAN-32), so the frontend and backend agree: `cleanName` (what is stored), `normalizeName` (the key above, also used for search), `nameMatches` (search boxes: "dang" finds "Phạm Đăng") and `findSameName` (duplicate check before saving).
 
