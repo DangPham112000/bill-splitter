@@ -86,7 +86,7 @@ export const countMembers = (splitterId: mongoose.Types.ObjectId) =>
   MemberModel.countDocuments({ splitterId, removedAt: null });
 
 /** "2026-12-24" → a Date at UTC midnight. Null and empty clear the date. */
-function parseDay(value: string | null | undefined, field: string): Date | null {
+export function parseDay(value: string | null | undefined, field: string): Date | null {
   if (value === null || value === undefined || value === '') return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   const date = match ? new Date(Date.UTC(+match[1], +match[2] - 1, +match[3])) : null;
@@ -96,7 +96,7 @@ function parseDay(value: string | null | undefined, field: string): Date | null 
   return date;
 }
 
-const formatDay = (date: Date | null | undefined) =>
+export const formatDay = (date: Date | null | undefined) =>
   date ? date.toISOString().slice(0, 10) : null;
 
 function parseCurrency(value: string | null | undefined): string {
@@ -188,6 +188,16 @@ async function openExisting(splitter: SplitterDoc, clerkId: string): Promise<Spl
   );
 }
 
+/** Active members in the order the app lists them: the admin, treasurers, then by joining time. */
+export async function activeMembers(splitterId: mongoose.Types.ObjectId) {
+  const members = await MemberModel.find({ splitterId, removedAt: null }).sort({
+    createdAt: 1,
+    _id: 1,
+  });
+  const order = { admin: 0, treasurer: 1, member: 2 } as const;
+  return members.sort((a, b) => order[a.role] - order[b.role]);
+}
+
 export const isDuplicateKey = (error: unknown) => (error as { code?: number })?.code === 11000;
 
 /** A name not yet in `taken` (compared like the unique index does): "Minh", then "Minh 2". */
@@ -212,7 +222,7 @@ function dayInZone(timeZone: string | null | undefined): (date: Date) => string 
 
 const cleanDescription = (value: string | null | undefined) => value?.trim() || undefined;
 
-async function findReadable(id: string, clerkId: string | null): Promise<SplitterDoc> {
+export async function findReadable(id: string, clerkId: string | null): Promise<SplitterDoc> {
   if (!mongoose.isValidObjectId(id)) throw notFound();
   const splitter = await SplitterModel.findById(id);
   if (!splitter || !(await canRead(splitter, clerkId))) throw notFound();
@@ -441,14 +451,7 @@ export const splitterResolvers = {
     myRole: (splitter: SplitterDoc, _args: unknown, context: Context) => roleOf(splitter, context),
     inviteToken: (splitter: SplitterDoc, _args: unknown, context: Context) =>
       splitter.adminUserId === context.clerkId ? splitter.inviteToken : null,
-    members: async (splitter: SplitterDoc) => {
-      const members = await MemberModel.find({ splitterId: splitter._id, removedAt: null }).sort({
-        createdAt: 1,
-        _id: 1,
-      });
-      const order = { admin: 0, treasurer: 1, member: 2 } as const;
-      return members.sort((a, b) => order[a.role] - order[b.role]);
-    },
+    members: (splitter: SplitterDoc) => activeMembers(splitter._id),
   },
 
   EventManagerEvent: {

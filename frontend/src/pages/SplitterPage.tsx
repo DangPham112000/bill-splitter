@@ -12,6 +12,8 @@ import {
 import { InvitePanel } from '../components/InvitePanel';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { MemberList } from '../components/MemberList';
+import { ExpenseList } from '../components/ExpenseList';
+import { BalanceList } from '../components/BalanceList';
 import { Card, EmojiTile, EmptyState, Icon, Loading } from '../components/ui';
 import { btn } from '../lib/styles';
 import { useAuthState } from '../lib/useAuthState';
@@ -112,8 +114,20 @@ function SplitterView({ splitter }: { splitter: Splitter }) {
         </div>
 
         <div role="tabpanel">
-          {shownTab === 'expenses' && <ExpensesTab />}
-          {shownTab === 'balances' && <BalancesTab />}
+          {shownTab === 'expenses' && (
+            <ExpenseList
+              splitterId={splitter.id}
+              currency={splitter.currency}
+              canAdd={Boolean(splitter.me) && splitter.status === 'open'}
+            />
+          )}
+          {shownTab === 'balances' && (
+            <BalanceList
+              splitterId={splitter.id}
+              currency={splitter.currency}
+              members={splitter.members}
+            />
+          )}
           {shownTab === 'members' && people}
         </div>
       </div>
@@ -184,27 +198,5 @@ function SplitterHeader({ splitter }: { splitter: Splitter }) {
         </div>
       )}
     </header>
-  );
-}
-
-// Placeholders until expenses (DAN-43), balances (DAN-51) and settling up (DAN-52) exist.
-function ExpensesTab() {
-  return (
-    <Card>
-      <EmptyState icon="🧾" title="No expenses yet">
-        Adding expenses is coming soon. Each person will add what they paid from their own phone.
-      </EmptyState>
-    </Card>
-  );
-}
-
-function BalancesTab() {
-  return (
-    <Card>
-      <EmptyState icon="🤝" title="Nothing to settle yet">
-        Once expenses are added, you will see who is owed and who owes, and the fewest transfers to
-        settle up.
-      </EmptyState>
-    </Card>
   );
 }

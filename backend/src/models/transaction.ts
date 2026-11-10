@@ -1,8 +1,7 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { amountValidator, currencyValidator, isPositiveAmount } from './money.js';
+import { SPLIT_METHODS, amountValidator, currencyValidator, isPositiveAmount } from './money.js';
 
 export const TRANSACTION_TYPES = ['expense', 'income', 'fund_contribution', 'transfer'] as const;
-export const SPLIT_METHODS = ['equal', 'exact', 'shares'] as const;
 
 const participantSchema = new Schema(
   {
@@ -52,7 +51,10 @@ const transactionSchema = new Schema(
     },
     original: { type: originalAmountSchema },
     description: { type: String, trim: true, maxlength: 200, default: '' },
+    // One of EXPENSE_CATEGORIES in the shared package (food, transport, ...).
     category: { type: String, trim: true, maxlength: 50 },
+    // Optional longer note, e.g. what was in the bill (DAN-43).
+    note: { type: String, trim: true, maxlength: 1000 },
     date: { type: Date, required: true, default: Date.now },
     // Who handed over the money: expense payer, fund contributor, or transfer sender.
     paidByMemberId: { type: Schema.Types.ObjectId, ref: 'Member' },

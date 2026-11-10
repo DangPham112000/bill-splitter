@@ -3,3 +3,7 @@ export * from './amountFormat.js';
 export * from './fromEvent.js';
 export * from './names.js';
 export * from './dates.js';
+export * from './split.js';
+export * from './balances.js';
+export * from './settlement.js';
+export * from './categories.js';

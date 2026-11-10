@@ -100,6 +100,149 @@ export const typeDefs = `#graphql
     "The Event Manager event it was created from, if any. Details were copied once, not synced."
     linkedEvent: LinkedEvent
     createdAt: String!
+    "The caller's own member here, or null if they have not joined (DAN-43)."
+    me: Member
+    "Live (not deleted) transactions, newest first."
+    transactions: [Transaction!]!
+    "Net balance of every member (DAN-51)."
+    balances: Balances!
+    """
+    The fewest transfers that settle every balance (DAN-52). roundTo rounds every transfer to a
+    multiple of it, e.g. 1000 for 1.000 ₫ (one person absorbs the difference, see rounding); viaMemberId routes every
+    payment through that member, e.g. the treasurer.
+    """
+    settlement(roundTo: Float, viaMemberId: ID): Settlement!
+  }
+
+  enum TransactionType {
+    expense
+    income
+    fund_contribution
+    transfer
+  }
+
+  enum SplitMethod {
+    equal
+    exact
+    shares
+  }
+
+  type SplitParticipant {
+    member: Member!
+    "Weight for the shares method."
+    shares: Int
+    "What this member's part comes to."
+    amount: Float!
+  }
+
+  type Split {
+    method: SplitMethod!
+    participants: [SplitParticipant!]!
+  }
+
+  """
+  One movement of money. Amounts are whole numbers in the splitter currency's minor unit (dong for
+  VND), sent as Float because GraphQL's Int stops at about 2.1 billion.
+  """
+  type Transaction {
+    id: ID!
+    type: TransactionType!
+    amount: Float!
+    description: String!
+    "food, transport, lodging, activities, shopping or other."
+    category: String
+    note: String
+    "YYYY-MM-DD"
+    date: String!
+    "Who paid; null when an expense was paid from the initial fund."
+    paidBy: Member
+    paidFromFund: Boolean!
+    "Who got the money, for income and transfers."
+    receivedBy: Member
+    split: Split
+    createdBy: Member!
+    "True when it was added from the device making this request."
+    addedOnThisDevice: Boolean!
+    createdAt: String!
+  }
+
+  "One member's totals and net balance (DAN-51). Positive: should receive; negative: should pay."
+  type MemberBalance {
+    member: Member!
+    "Expenses paid out of pocket."
+    paid: Float!
+    "Their share of all expenses."
+    share: Float!
+    "Income received and held for the group."
+    received: Float!
+    incomeShare: Float!
+    "Paid into the initial fund."
+    contributed: Float!
+    "Settlement transfers sent and received."
+    sent: Float!
+    got: Float!
+    "Fund money held as its holder (collected minus spent)."
+    holdsFund: Float!
+    balance: Float!
+  }
+
+  type Balances {
+    "Every active member, plus anyone removed who is still in a transaction."
+    members: [MemberBalance!]!
+    """
+    Fund money no member holds yet, signed like a balance: negative while money is left in the
+    fund, positive when the fund is overspent. Member balances plus this sum to exactly 0.
+    """
+    fund: Float!
+    totalExpenses: Float!
+  }
+
+  "One suggested payment. A null member means the initial fund."
+  type SettlementTransfer {
+    from: Member
+    to: Member
+    amount: Float!
+  }
+
+  "How far rounding moved someone's balance: positive means they get more or pay less."
+  type RoundingAdjustment {
+    member: Member
+    difference: Float!
+  }
+
+  type Settlement {
+    transfers: [SettlementTransfer!]!
+    "False when the group was too big for the exact search, so the greedy result is shown."
+    exact: Boolean!
+    rounding: [RoundingAdjustment!]!
+  }
+
+  input SplitParticipantInput {
+    memberId: ID!
+    "For the shares method, at least 1."
+    shares: Int
+    "For the exact method."
+    amount: Float
+  }
+
+  input SplitInput {
+    method: SplitMethod!
+    participants: [SplitParticipantInput!]!
+  }
+
+  input AddExpenseInput {
+    "Greater than 0, in the splitter currency's minor unit."
+    amount: Float!
+    description: String!
+    "YYYY-MM-DD; today in Vietnam when left out."
+    date: String
+    category: String
+    note: String
+    "Who paid; the caller when left out. Only the admin or a treasurer can pick someone else."
+    paidByMemberId: ID
+    "Paid from the initial fund instead of by a member. Admin or treasurer, needs the fund."
+    paidFromFund: Boolean
+    split: SplitInput!
   }
 
   """
@@ -248,6 +391,11 @@ export const typeDefs = `#graphql
     NOT_SIGNED_IN unless the member is linked to an account. Admin only, not on a locked splitter.
     """
     setMemberRole(splitterId: ID!, memberId: ID!, role: AssignableRole!): Splitter!
+    """
+    Add an expense (DAN-43). The caller must be a member; the entry is tied to this device, so
+    send X-Device-Id. Not on a locked splitter.
+    """
+    addExpense(splitterId: ID!, input: AddExpenseInput!): Transaction!
     "Name this device, shown when someone tries to edit its entries elsewhere. Null or blank clears it."
     setDeviceNickname(nickname: String): ThisDevice!
   }
