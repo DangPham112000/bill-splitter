@@ -54,6 +54,14 @@ export const typeDefs = `#graphql
     id: ID!
     displayName: String!
     role: MemberRole!
+    "True when the member is linked to a signed-in account, which a treasurer needs."
+    hasAccount: Boolean!
+  }
+
+  "The roles the admin can hand out. There is always exactly one admin."
+  enum AssignableRole {
+    treasurer
+    member
   }
 
   "A reference to the event in another ecosystem app a splitter was created from."
@@ -87,6 +95,8 @@ export const typeDefs = `#graphql
     members: [Member!]!
     "True when the signed-in user created this splitter."
     isAdmin: Boolean!
+    "The signed-in user's role here, or null if they are not a linked member (DAN-38)."
+    myRole: MemberRole
     "The Event Manager event it was created from, if any. Details were copied once, not synced."
     linkedEvent: LinkedEvent
     createdAt: String!
@@ -232,6 +242,12 @@ export const typeDefs = `#graphql
     The admin cannot be removed. Admin only, not on a locked splitter.
     """
     removeMember(splitterId: ID!, memberId: ID!): Splitter!
+    """
+    Make a member treasurer, or back to a plain member (DAN-38). Treasurers can change anyone's
+    transactions, enter them for others and manage the fund. Granting is refused with
+    NOT_SIGNED_IN unless the member is linked to an account. Admin only, not on a locked splitter.
+    """
+    setMemberRole(splitterId: ID!, memberId: ID!, role: AssignableRole!): Splitter!
     "Name this device, shown when someone tries to edit its entries elsewhere. Null or blank clears it."
     setDeviceNickname(nickname: String): ThisDevice!
   }

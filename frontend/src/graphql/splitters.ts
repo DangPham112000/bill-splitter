@@ -3,7 +3,7 @@ import { gql } from '@apollo/client';
 export type SplitterType = 'trip' | 'party' | 'project' | 'other';
 export type MemberRole = 'admin' | 'treasurer' | 'member';
 
-export type Member = { id: string; displayName: string; role: MemberRole };
+export type Member = { id: string; displayName: string; role: MemberRole; hasAccount: boolean };
 
 export type LinkedEvent = { app: string; id: string; url: string };
 
@@ -21,6 +21,8 @@ export type Splitter = {
   inviteToken: string | null;
   joiningEnabled: boolean;
   isAdmin: boolean;
+  /** The signed-in user's role here, null when they are not a linked member. */
+  myRole: MemberRole | null;
   members: Member[];
   linkedEvent: LinkedEvent | null;
 };
@@ -61,10 +63,12 @@ export const SPLITTER_FIELDS = gql`
     inviteToken
     joiningEnabled
     isAdmin
+    myRole
     members {
       id
       displayName
       role
+      hasAccount
     }
     linkedEvent {
       app
@@ -218,6 +222,7 @@ const MEMBERS_RESULT = `
     id
     displayName
     role
+    hasAccount
   }
 `;
 
@@ -240,6 +245,14 @@ export const RENAME_MEMBER = gql`
 export const REMOVE_MEMBER = gql`
   mutation RemoveMember($splitterId: ID!, $memberId: ID!) {
     removeMember(splitterId: $splitterId, memberId: $memberId) {
+      ${MEMBERS_RESULT}
+    }
+  }
+`;
+
+export const SET_MEMBER_ROLE = gql`
+  mutation SetMemberRole($splitterId: ID!, $memberId: ID!, $role: AssignableRole!) {
+    setMemberRole(splitterId: $splitterId, memberId: $memberId, role: $role) {
       ${MEMBERS_RESULT}
     }
   }

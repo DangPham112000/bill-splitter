@@ -11,6 +11,9 @@ type MemberDoc = InstanceType<typeof MemberModel>;
 // Keeps one splitter's lists and the join screen usable; a trip is rarely more than a few dozen.
 export const MAX_MEMBERS = 200;
 
+const ASSIGNABLE_ROLES = ['treasurer', 'member'] as const;
+type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+
 const memberNotFound = () =>
   new GraphQLError('Member not found', { extensions: { code: 'NOT_FOUND' } });
 
@@ -145,6 +148,37 @@ export const memberResolvers = {
       const before = snapshot(member);
       member.displayName = displayName;
       await saveMember(member, displayName);
+      await audit(splitter, context, 'update', member, before, snapshot(member));
+      return splitter;
+    },
+
+    /**
+     * Grant or revoke the treasurer role (DAN-38). A treasurer must be linked to an account, so
+     * their rights work wherever they sign in; a name nobody has claimed yet cannot be one.
+     */
+    setMemberRole: async (
+      _parent: unknown,
+      { splitterId, memberId, role }: { splitterId: string; memberId: string; role: string },
+      context: Context,
+    ) => {
+      const splitter = await findEditable(splitterId, context);
+      const member = await findActiveMember(splitter, memberId);
+      if (!ASSIGNABLE_ROLES.includes(role as AssignableRole)) {
+        throw badInput('The role must be treasurer or member');
+      }
+      if (member.role === 'admin') throw badInput('The admin’s role cannot change');
+      if (member.role === role) return splitter;
+      if (role === 'treasurer' && !member.userId) {
+        throw new GraphQLError(
+          `${member.displayName} has to sign in and join with their name before they can be ` +
+            'treasurer, so their rights follow their account to any device.',
+          { extensions: { code: 'NOT_SIGNED_IN' } },
+        );
+      }
+
+      const before = snapshot(member);
+      member.role = role as AssignableRole;
+      await member.save();
       await audit(splitter, context, 'update', member, before, snapshot(member));
       return splitter;
     },

@@ -4,6 +4,7 @@ import { GraphQLError } from 'graphql';
 import { requireClerkId, requireSessionToken, type Context } from '../auth.js';
 import { eventUrl, getEvent, listEvents, type EventManagerEvent } from '../eventManager.js';
 import { findUser } from '../coreUsers.js';
+import { roleOf } from '../permissions.js';
 import {
   cleanName,
   daysFromEvent,
@@ -437,6 +438,7 @@ export const splitterResolvers = {
         : null,
     isAdmin: (splitter: SplitterDoc, _args: unknown, context: Context) =>
       splitter.adminUserId === context.clerkId,
+    myRole: (splitter: SplitterDoc, _args: unknown, context: Context) => roleOf(splitter, context),
     inviteToken: (splitter: SplitterDoc, _args: unknown, context: Context) =>
       splitter.adminUserId === context.clerkId ? splitter.inviteToken : null,
     members: async (splitter: SplitterDoc) => {
@@ -462,5 +464,6 @@ export const splitterResolvers = {
 
   Member: {
     id: (member: { _id: mongoose.Types.ObjectId }) => member._id.toString(),
+    hasAccount: (member: { userId?: string | null }) => Boolean(member.userId),
   },
 };

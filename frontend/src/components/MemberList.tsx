@@ -5,6 +5,7 @@ import {
   ADD_MEMBER,
   REMOVE_MEMBER,
   RENAME_MEMBER,
+  SET_MEMBER_ROLE,
   type Member,
   type MemberRole,
 } from '../graphql/splitters';
@@ -14,6 +15,12 @@ const ROLE_LABELS: Record<MemberRole, string | null> = {
   admin: 'Admin',
   treasurer: 'Treasurer',
   member: null,
+};
+
+const ROLE_BADGES: Record<MemberRole, string> = {
+  admin: 'bg-sky-100 text-sky-800',
+  treasurer: 'bg-amber-100 text-amber-800',
+  member: 'bg-slate-100 text-slate-600',
 };
 
 // Below this many members the whole list fits on a phone screen, so no search box.
@@ -79,6 +86,12 @@ export function MemberList({ splitterId, members, canManage }: Props) {
           )}
         </ul>
       )}
+      {canManage && (
+        <p className="px-1 text-xs text-slate-500">
+          Treasurers can change anyone's transactions, enter them for others and manage the fund.
+          Only members who signed in can be treasurer.
+        </p>
+      )}
       {canManage && <AddMemberForm splitterId={splitterId} members={members} />}
     </section>
   );
@@ -96,8 +109,21 @@ function MemberRow({
   onRename: () => void;
 }) {
   const [remove, removing] = useMutation(REMOVE_MEMBER);
+  const [setRole, settingRole] = useMutation(SET_MEMBER_ROLE);
   const [error, setError] = useState<string | null>(null);
   const label = ROLE_LABELS[member.role];
+  const isTreasurer = member.role === 'treasurer';
+
+  const toggleTreasurer = async () => {
+    setError(null);
+    try {
+      await setRole({
+        variables: { splitterId, memberId: member.id, role: isTreasurer ? 'member' : 'treasurer' },
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   const confirmRemove = async () => {
     const ok = window.confirm(
@@ -115,11 +141,11 @@ function MemberRow({
 
   return (
     <li className="flex flex-col gap-1 px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="min-w-0 break-words">{member.displayName}</span>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {label && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+            <span className={`rounded-full px-2 py-0.5 text-xs ${ROLE_BADGES[member.role]}`}>
               {label}
             </span>
           )}
@@ -128,6 +154,26 @@ function MemberRow({
               <button type="button" onClick={onRename} className={smallButton}>
                 Rename
               </button>
+              {member.role !== 'admin' && (
+                <button
+                  type="button"
+                  onClick={toggleTreasurer}
+                  // A treasurer needs an account, so their rights follow them to any device.
+                  disabled={settingRole.loading || (!isTreasurer && !member.hasAccount)}
+                  title={
+                    !isTreasurer && !member.hasAccount
+                      ? 'They need to sign in and join with this name first'
+                      : undefined
+                  }
+                  className={smallButton}
+                >
+                  {settingRole.loading
+                    ? 'Saving…'
+                    : isTreasurer
+                      ? 'Remove treasurer'
+                      : 'Make treasurer'}
+                </button>
+              )}
               {member.role !== 'admin' && (
                 <button
                   type="button"
