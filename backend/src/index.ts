@@ -6,6 +6,7 @@ import { expressMiddleware } from '@as-integrations/express5';
 import { typeDefs } from './graphql/typeDefs.js';
 import { resolvers } from './graphql/resolvers.js';
 import { getHealth } from './health.js';
+import { joinLinkPreview } from './linkPreview.js';
 import { contextFromRequest, type Context } from './auth.js';
 // Registers the Mongoose models so their indexes are built on connect.
 import './models/index.js';
@@ -21,6 +22,9 @@ async function startServer() {
     const health = getHealth();
     res.status(health.status === 'ok' ? 200 : 503).json(health);
   });
+
+  // Link preview tags for /join/<token>, included into index.html by the frontend nginx (DAN-36).
+  app.get('/link-preview/join/:token', joinLinkPreview);
 
   const server = new ApolloServer<Context>({ typeDefs, resolvers });
   await server.start();

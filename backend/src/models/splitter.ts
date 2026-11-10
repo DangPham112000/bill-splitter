@@ -23,6 +23,8 @@ const splitterSchema = new Schema(
     },
     // Secret part of the join link. Regenerating it invalidates old links.
     inviteToken: { type: String, required: true },
+    // The admin can turn the link off without changing it (DAN-36).
+    joiningEnabled: { type: Boolean, default: true },
     hasInitialFund: { type: Boolean, default: false },
     // "locked" freezes transactions once the group has settled up.
     status: { type: String, enum: SPLITTER_STATUSES, default: 'open' },

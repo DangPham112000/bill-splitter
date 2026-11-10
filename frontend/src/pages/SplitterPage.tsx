@@ -10,6 +10,7 @@ import {
   type MemberRole,
   type Splitter,
 } from '../graphql/splitters';
+import { InvitePanel } from '../components/InvitePanel';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { inputClass } from '../lib/splitterForm';
 import { useAuthState } from '../lib/useAuthState';
@@ -85,7 +86,14 @@ export function SplitterPage() {
         </section>
       )}
 
-      {splitter.inviteToken && <InviteLink token={splitter.inviteToken} />}
+      {splitter.inviteToken && (
+        <InvitePanel
+          splitterId={splitter.id}
+          splitterName={splitter.name}
+          token={splitter.inviteToken}
+          joiningEnabled={splitter.joiningEnabled}
+        />
+      )}
 
       <MemberList members={splitter.members} />
     </div>
@@ -129,45 +137,6 @@ function MemberList({ members }: { members: Splitter['members'] }) {
           ))}
         </ul>
       )}
-    </section>
-  );
-}
-
-function InviteLink({ token }: { token: string }) {
-  const [copied, setCopied] = useState(false);
-  const link = `${window.location.origin}/join/${token}`;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked (e.g. not HTTPS): the link is still selectable.
-    }
-  };
-
-  return (
-    <section className="flex flex-col gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3">
-      <h2 className="text-sm font-medium text-sky-800">Invite link</h2>
-      <div className="flex gap-2">
-        <input
-          readOnly
-          value={link}
-          onFocus={(e) => e.target.select()}
-          className="min-w-0 flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm"
-        />
-        <button
-          type="button"
-          onClick={copy}
-          className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
-        >
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-      <p className="text-xs text-sky-700">
-        Joining through this link is coming next; for now only you can open this splitter.
-      </p>
     </section>
   );
 }

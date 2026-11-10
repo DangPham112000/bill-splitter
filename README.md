@@ -50,6 +50,12 @@ Sign-in is optional and never a gate: members join a splitter through its link w
 - **There is no User table.** The Clerk user id is the identity: `Splitter.adminUserId` is the creator's Clerk user id and `Member.userId` is set to the member's Clerk user id when a signed-in user links their member. Email, name and avatar are read from the ecosystem's shared `core.users` (`backend/src/coreUsers.ts`, read-only; only the core-users service in `ecosystem-infra` writes it), with the Clerk API as fallback when a new user's webhook has not arrived yet (DAN-93). Use `findUsers` to show a splitter's admin and linked members.
 - `CLERK_AUTHORIZED_PARTIES` is only `https://bills.dantepham.site`, so session tokens issued to the other apps are refused.
 
+## Join links and link previews
+
+The admin shares `/join/<inviteToken>` by copying it, through the phone's share sheet (Zalo, Messenger) or as a QR code, and can make a new link or turn joining off (DAN-36).
+
+Chat apps read a page without running JavaScript, so link previews come from the server: the frontend nginx serves `/join/<token>` with SSI on, and the `<!--# include virtual="/link-preview/join/$invite_token" -->` comment in `frontend/index.html` is replaced by Open Graph tags from the backend (`GET /link-preview/join/:token`, `backend/src/linkPreview.ts`). The splitter's name, dates and member count go into the preview only while joining is on; old or unknown tokens get a generic preview. That backend route is reachable only through nginx's internal subrequest, and if the backend is down the page still loads without preview tags. On every other path, and under `pnpm dev`, the comment is a plain HTML comment. The preview image is `frontend/public/og-image.png`, linked from `APP_URL` (default `https://bills.dantepham.site`).
+
 ## Deployment
 
 Pushing to `main` deploys to production at **https://bills.dantepham.site** (`.github/workflows/deploy.yml`): it builds the backend and frontend images, pushes them to GHCR, copies `docker-compose.yml` to `/opt/bill-splitter` on the shared VPS and runs `doppler run -- docker compose up -d`. MongoDB is the ecosystem's shared instance (`ecosystem-mongo`, DAN-90): the backend logs in as the `bill-splitter` user with `MONGO_PASSWORD` from Doppler `bill-splitter/prd` (a reference to `shared/prd`). Pull requests run lint, typecheck and build (`.github/workflows/ci.yml`).

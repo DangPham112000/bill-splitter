@@ -31,12 +31,15 @@ A trip, party or project that people join.
 | `startDate`, `endDate` | Date                                      | Optional; `endDate` cannot be before `startDate` |
 | `currency`             | ISO 4217 code                             | Default `VND`; all balances use it               |
 | `inviteToken`          | string                                    | Secret part of the join link; unique             |
+| `joiningEnabled`       | boolean                                   | Default `true`; the admin can turn the link off  |
 | `hasInitialFund`       | boolean                                   | Whether the group pools money up front           |
 | `status`               | `open` \| `locked`                        | Locked splitters accept no new transactions      |
 | `adminUserId`          | string                                    | Clerk user id of the signed-in creator           |
 | `linkedEvent`          | `{ app, id }`                             | Event Manager event it was created from (DAN-96) |
 
 Indexes: `inviteToken` (unique), `adminUserId + createdAt`, `linkedEvent.app + linkedEvent.id` (unique: one splitter per event).
+
+The join link is `/join/<inviteToken>` (DAN-36). The token is 128 random bits in base64url (22 characters). `regenerateInviteToken` replaces it, so old links stop working at once; `setJoiningEnabled` turns the link off without changing it. `invite(token)` is public and returns only what the link preview shows (name, type, emoji, dates, currency, member count), plus the splitter id when the caller can already open it.
 
 `linkedEvent` is only a reference (`app` is `event-manager`). The event's title, description, dates and attendees are copied into the form once, when the splitter is created, and are not kept in sync. Event Manager's "Split costs" button opens `/events/:eventId`, which calls `splitterForEvent`: it returns the event's splitter, or creates it with the caller as admin and everyone who JOINED the event as linked members. Attendees the admin keeps (when creating from the form) become members with `userId` set to their Clerk id; the backend checks each one is an attendee of the event, read live from Event Manager with the admin's own session token.
 
