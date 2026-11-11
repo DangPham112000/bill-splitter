@@ -4,3 +4,4 @@ export * from './member.js';
 export * from './device.js';
 export * from './transaction.js';
 export * from './auditLog.js';
+export * from './memberDevice.js';

@@ -5,6 +5,7 @@ import { splitterResolvers } from './splitters.js';
 import { deviceResolvers } from './devices.js';
 import { memberResolvers } from './members.js';
 import { transactionResolvers } from './transactions.js';
+import { joiningResolvers } from './joining.js';
 
 export const resolvers = {
   Query: {
@@ -29,9 +30,12 @@ export const resolvers = {
     ...deviceResolvers.Mutation,
     ...memberResolvers.Mutation,
     ...transactionResolvers.Mutation,
+    ...joiningResolvers.Mutation,
   },
   Splitter: { ...splitterResolvers.Splitter, ...transactionResolvers.Splitter },
   Transaction: transactionResolvers.Transaction,
   Member: splitterResolvers.Member,
   EventManagerEvent: splitterResolvers.EventManagerEvent,
+  InvitePreview: joiningResolvers.InvitePreview,
+  JoinableMember: joiningResolvers.JoinableMember,
 };

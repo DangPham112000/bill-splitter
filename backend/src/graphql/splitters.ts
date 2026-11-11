@@ -5,6 +5,7 @@ import { requireClerkId, requireSessionToken, type Context } from '../auth.js';
 import { eventUrl, getEvent, listEvents, type EventManagerEvent } from '../eventManager.js';
 import { findUser } from '../coreUsers.js';
 import { roleOf } from '../permissions.js';
+import { deviceMember } from '../memberDevices.js';
 import {
   cleanName,
   daysFromEvent,
@@ -105,13 +106,19 @@ function parseCurrency(value: string | null | undefined): string {
   return code;
 }
 
-/** The admin, or a member linked to the signed-in account, may read a splitter. */
-async function canRead(splitter: SplitterDoc, clerkId: string | null): Promise<boolean> {
-  if (!clerkId) return false;
-  if (splitter.adminUserId === clerkId) return true;
-  return Boolean(
-    await MemberModel.exists({ splitterId: splitter._id, userId: clerkId, removedAt: null }),
-  );
+/**
+ * Who may read a splitter: the admin, a member linked to the signed-in account, or a device that
+ * picked a name through the join link (DAN-41).
+ */
+export async function canRead(splitter: SplitterDoc, context: Context): Promise<boolean> {
+  const { clerkId } = context;
+  if (clerkId) {
+    if (splitter.adminUserId === clerkId) return true;
+    if (await MemberModel.exists({ splitterId: splitter._id, userId: clerkId, removedAt: null })) {
+      return true;
+    }
+  }
+  return Boolean(await deviceMember(splitter._id, context.deviceId));
 }
 
 /**
@@ -178,8 +185,8 @@ const splitterOfEvent = (eventId: string) =>
   SplitterModel.findOne({ 'linkedEvent.app': 'event-manager', 'linkedEvent.id': eventId });
 
 /** The event's splitter, if this user is in it; otherwise say who can add them. */
-async function openExisting(splitter: SplitterDoc, clerkId: string): Promise<SplitterDoc> {
-  if (await canRead(splitter, clerkId)) return splitter;
+async function openExisting(splitter: SplitterDoc, context: Context): Promise<SplitterDoc> {
+  if (await canRead(splitter, context)) return splitter;
   const admin = await findUser(splitter.adminUserId);
   throw new GraphQLError(
     `This event already has a splitter, "${splitter.name}", and you are not in it yet. ` +
@@ -222,17 +229,17 @@ function dayInZone(timeZone: string | null | undefined): (date: Date) => string 
 
 const cleanDescription = (value: string | null | undefined) => value?.trim() || undefined;
 
-export async function findReadable(id: string, clerkId: string | null): Promise<SplitterDoc> {
+export async function findReadable(id: string, context: Context): Promise<SplitterDoc> {
   if (!mongoose.isValidObjectId(id)) throw notFound();
   const splitter = await SplitterModel.findById(id);
-  if (!splitter || !(await canRead(splitter, clerkId))) throw notFound();
+  if (!splitter || !(await canRead(splitter, context))) throw notFound();
   return splitter;
 }
 
 /** A splitter the caller administers; anyone else gets NOT_FOUND or FORBIDDEN. */
 export async function findAdministered(id: string, context: Context): Promise<SplitterDoc> {
   const clerkId = requireClerkId(context);
-  const splitter = await findReadable(id, clerkId);
+  const splitter = await findReadable(id, context);
   if (splitter.adminUserId !== clerkId) {
     throw new GraphQLError('Only the admin can change this splitter', {
       extensions: { code: 'FORBIDDEN' },
@@ -254,7 +261,7 @@ export const splitterResolvers = {
     },
 
     splitter: (_parent: unknown, { id }: { id: string }, context: Context) =>
-      findReadable(id, context.clerkId),
+      findReadable(id, context),
 
     eventManagerEvents: (_parent: unknown, _args: unknown, context: Context) =>
       listEvents(requireSessionToken(context)),
@@ -273,7 +280,9 @@ export const splitterResolvers = {
         status: splitter.status,
         memberCount: await countMembers(splitter._id),
         joiningEnabled: splitter.joiningEnabled,
-        splitterId: (await canRead(splitter, context.clerkId)) ? splitter._id.toString() : null,
+        splitterId: (await canRead(splitter, context)) ? splitter._id.toString() : null,
+        // For InvitePreview.members, which lists names only while joining is open.
+        splitter,
       };
     },
   },
@@ -344,7 +353,7 @@ export const splitterResolvers = {
       }
 
       const existing = await splitterOfEvent(event.id);
-      if (existing) return openExisting(existing, clerkId);
+      if (existing) return openExisting(existing, context);
 
       // Everyone who joined the event, linked to their account; "interested" people stay out.
       const me = event.attendees.find((a) => a.user.id === clerkId);
@@ -382,7 +391,7 @@ export const splitterResolvers = {
       } catch (error) {
         // Someone else (or a second click) created it a moment ago: open that one.
         const created = isDuplicateKey(error) ? await splitterOfEvent(event.id) : null;
-        if (created) return openExisting(created, clerkId);
+        if (created) return openExisting(created, context);
         throw error;
       }
     },

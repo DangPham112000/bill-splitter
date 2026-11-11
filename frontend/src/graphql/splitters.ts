@@ -153,6 +153,19 @@ export type InvitePreview = {
   memberCount: number;
   joiningEnabled: boolean;
   splitterId: string | null;
+  /** Names to pick from, this device's first. Empty while joining is off. */
+  members: JoinableMember[];
+};
+
+/** A name on the join screen (DAN-41). */
+export type JoinableMember = {
+  id: string;
+  displayName: string;
+  role: MemberRole;
+  hasAccount: boolean;
+  usedOnThisDevice: boolean;
+  /** Linked to the signed-in account. */
+  isMe: boolean;
 };
 
 export const GET_INVITE = gql`
@@ -168,8 +181,32 @@ export const GET_INVITE = gql`
       memberCount
       joiningEnabled
       splitterId
+      members {
+        id
+        displayName
+        role
+        hasAccount
+        usedOnThisDevice
+        isMe
+      }
     }
   }
+`;
+
+/** Exactly one of memberId (pick an existing name) and name (add a new one). */
+export type JoinSplitterInput = {
+  memberId?: string;
+  name?: string;
+  linkAccount?: boolean;
+};
+
+export const JOIN_SPLITTER = gql`
+  mutation JoinSplitter($token: String!, $input: JoinSplitterInput!) {
+    joinSplitter(token: $token, input: $input) {
+      ...SplitterFields
+    }
+  }
+  ${SPLITTER_FIELDS}
 `;
 
 /** The join link people share: /join/<token>. */

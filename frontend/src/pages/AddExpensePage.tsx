@@ -11,7 +11,6 @@ import {
 } from '@bill-splitter/shared';
 import AmountInput from '../components/AmountInput';
 import { Field } from '../components/SplitterForm';
-import { SignInPrompt } from '../components/SignInPrompt';
 import { Avatar, Card, EmptyState, Icon, Loading, SectionTitle } from '../components/ui';
 import { GET_SPLITTER, type Member, type Splitter } from '../graphql/splitters';
 import { ADD_EXPENSE, SPLITTER_BALANCES, SPLITTER_EXPENSES } from '../graphql/transactions';
@@ -29,14 +28,14 @@ const today = () => new Date().toLocaleDateString('en-CA');
 
 export function AddExpensePage() {
   const { id } = useParams();
-  const { isLoaded, isSignedIn } = useAuthState();
+  const { isLoaded } = useAuthState();
+  // Members who joined on this device add expenses signed out (DAN-41).
   const { data, loading } = useQuery<{ splitter: Splitter | null }>(GET_SPLITTER, {
     variables: { id },
-    skip: !isSignedIn,
+    skip: !isLoaded,
   });
 
-  if (!isLoaded || loading) return <Loading />;
-  if (!isSignedIn) return <SignInPrompt message="Sign in to add an expense." />;
+  if (!isLoaded || (loading && !data)) return <Loading />;
   const splitter = data?.splitter;
   if (!splitter) {
     return (
