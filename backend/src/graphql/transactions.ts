@@ -11,6 +11,7 @@ import {
 } from '@bill-splitter/shared';
 import type { Context } from '../auth.js';
 import { requireDevice } from '../device.js';
+import { deviceMember } from '../memberDevices.js';
 import { can, roleOf } from '../permissions.js';
 import {
   AuditLogModel,
@@ -52,16 +53,19 @@ const forbidden = (message: string) =>
   new GraphQLError(message, { extensions: { code: 'FORBIDDEN' } });
 
 /**
- * The member the caller is in this splitter. Until joining by name on a device exists (DAN-41),
- * that is the member linked to the signed-in account; DAN-41 adds the name picked on this device.
+ * The member the caller is in this splitter: the one linked to the signed-in account, otherwise
+ * the name this device picked through the join link (DAN-41).
  */
 export async function myMember(splitter: SplitterDoc, context: Context): Promise<MemberDoc | null> {
-  if (!context.clerkId) return null;
-  return MemberModel.findOne({
-    splitterId: splitter._id,
-    userId: context.clerkId,
-    removedAt: null,
-  });
+  if (context.clerkId) {
+    const linked = await MemberModel.findOne({
+      splitterId: splitter._id,
+      userId: context.clerkId,
+      removedAt: null,
+    });
+    if (linked) return linked;
+  }
+  return deviceMember(splitter._id, context.deviceId);
 }
 
 /** Today in Vietnam, as the date of an expense entered without one. */
@@ -126,7 +130,7 @@ export const transactionResolvers = {
       { splitterId, input }: { splitterId: string; input: AddExpenseInput },
       context: Context,
     ) => {
-      const splitter = await findReadable(splitterId, context.clerkId);
+      const splitter = await findReadable(splitterId, context);
       if (splitter.status === 'locked') {
         throw forbidden('This splitter is locked, so no expenses can be added');
       }

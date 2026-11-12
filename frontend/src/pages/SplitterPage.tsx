@@ -30,21 +30,27 @@ const TABS: { id: Tab; label: string; icon: 'receipt' | 'scale' | 'users' }[] = 
 export function SplitterPage() {
   const { id } = useParams();
   const { isLoaded, isSignedIn } = useAuthState();
+  // Members who joined through the link on this device open it signed out (DAN-41).
   const { data, loading, error } = useQuery<{ splitter: Splitter | null }>(GET_SPLITTER, {
     variables: { id },
-    skip: !isSignedIn,
+    skip: !isLoaded,
   });
 
-  if (!isLoaded || loading) return <Loading />;
-  // Until joining through the link exists (DAN-41), only the admin can open a splitter.
-  if (!isSignedIn) return <SignInPrompt message="Sign in to open this splitter." />;
+  if (!isLoaded || (loading && !data)) return <Loading />;
   if (error || !data?.splitter) {
     return (
-      <Card>
-        <EmptyState icon="🔍" title="Splitter not found">
-          This splitter does not exist or is not yours.
-        </EmptyState>
-      </Card>
+      <div className="flex flex-col gap-4">
+        <Card>
+          <EmptyState icon="🔍" title="Splitter not found">
+            {isSignedIn
+              ? 'This splitter does not exist, or you have not joined it. Open the invite link to join.'
+              : 'You have not joined this splitter on this device. Open the invite link to pick your name.'}
+          </EmptyState>
+        </Card>
+        {!isSignedIn && (
+          <SignInPrompt message="Is your name linked to an account? Sign in to open it." />
+        )}
+      </div>
     );
   }
   return <SplitterView splitter={data.splitter} />;

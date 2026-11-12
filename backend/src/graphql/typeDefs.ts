@@ -245,9 +245,23 @@ export const typeDefs = `#graphql
     split: SplitInput!
   }
 
+  "A name on the join screen (DAN-41)."
+  type JoinableMember {
+    id: ID!
+    displayName: String!
+    role: MemberRole!
+    "Linked to a signed-in account."
+    hasAccount: Boolean!
+    "This device created the name, picked it before, or added transactions as it."
+    usedOnThisDevice: Boolean!
+    "Linked to the signed-in caller's account."
+    isMe: Boolean!
+  }
+
   """
-  What anyone holding a join link may see before joining (DAN-36). Never the members' details
-  or the token's splitter id, unless the caller can already open the splitter.
+  What anyone holding a join link may see before joining (DAN-36). Member names only while
+  joining is open, so people can pick theirs (DAN-41); the splitter id only when the caller can
+  already open the splitter.
   """
   type InvitePreview {
     name: String!
@@ -260,8 +274,20 @@ export const typeDefs = `#graphql
     memberCount: Int!
     "False when the admin has turned joining off; the link itself is still the current one."
     joiningEnabled: Boolean!
-    "Set only when the caller is the admin or a linked member, so the page can open the splitter."
+    "Set only when the caller can already open the splitter (admin, linked member, or joined on this device)."
     splitterId: ID
+    "Active names to pick from, this device's first. Empty while joining is off, unless already in."
+    members: [JoinableMember!]!
+  }
+
+  "Exactly one of memberId and name."
+  input JoinSplitterInput {
+    "Pick this existing member: it is you."
+    memberId: ID
+    "Or add yourself under a new name. Refused with NAME_TAKEN when it matches one ignoring case and accents."
+    name: String
+    "When signed in, link the member to your account so the splitter is in My splitters."
+    linkAccount: Boolean
   }
 
   enum Participation {
@@ -340,7 +366,7 @@ export const typeDefs = `#graphql
     me: Me
     "Splitters the signed-in user created or is linked to, newest first."
     mySplitters: [Splitter!]!
-    "A splitter the signed-in user created or is linked to."
+    "A splitter the caller created, is linked to, or joined on this device."
     splitter(id: ID!): Splitter
     "The signed-in user's Event Manager events, newest first, to create a splitter from."
     eventManagerEvents: [EventManagerEvent!]!
@@ -396,6 +422,13 @@ export const typeDefs = `#graphql
     send X-Device-Id. Not on a locked splitter.
     """
     addExpense(splitterId: ID!, input: AddExpenseInput!): Transaction!
+    """
+    Join through the link without signing in (DAN-41): pick your name or add a new one. The
+    choice is kept for this device (send X-Device-Id), which can then open the splitter as that
+    member. Picking a name used on another device is allowed: it is the same person on a new
+    phone, though entries made on the other device stay editable only there (DAN-47).
+    """
+    joinSplitter(token: String!, input: JoinSplitterInput!): Splitter!
     "Name this device, shown when someone tries to edit its entries elsewhere. Null or blank clears it."
     setDeviceNickname(nickname: String): ThisDevice!
   }

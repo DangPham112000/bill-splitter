@@ -5,7 +5,7 @@ MongoDB collections, defined with Mongoose in [`backend/src/models/`](../backend
 ```
 Splitter 1 ── * Member 1 ── * Transaction 1 ── * AuditLog
                                    │
-Device (global, keyed by deviceId) ┘  createdByDeviceId / AuditLog.deviceId
+Device (global, keyed by deviceId) ┘  createdByDeviceId / AuditLog.deviceId / MemberDevice
 ```
 
 ## Money and currencies
@@ -90,6 +90,24 @@ How the id is kept (DAN-30, [`backend/src/device.ts`](../backend/src/device.ts),
 | `label`                     | string | From the user agent, e.g. "iPhone · Safari" |
 | `nickname`                  | string | Optional, set by the user                   |
 | `firstSeenAt`, `lastSeenAt` | Date   |                                             |
+
+## MemberDevice
+
+A name picked on a device through the join link (DAN-41, [`backend/src/memberDevices.ts`](../backend/src/memberDevices.ts)). Members don't sign in, so this row is what lets a device open a splitter and which member it acts as there.
+
+| Field         | Type                | Notes                                  |
+| ------------- | ------------------- | -------------------------------------- |
+| `splitterId`  | ObjectId → Splitter |                                        |
+| `memberId`    | ObjectId → Member   | The name picked                        |
+| `deviceId`    | string              | The device that picked it              |
+| `firstUsedAt` | Date                |                                        |
+| `lastUsedAt`  | Date                | The latest active pick is the "me" one |
+
+Indexes: `splitterId + deviceId + memberId` (unique), `splitterId + deviceId + lastUsedAt`, `memberId`.
+
+**Joining** (`joinSplitter(token, input)`): the invite page lists the active names (only while joining is on), the ones this device created, picked or added transactions as first. Picking an existing name is allowed even if it was used on another device (same person, new phone); picking one linked to a _different_ signed-in account is refused. A new name that matches an existing one ignoring case and accents is refused with `NAME_TAKEN` and the existing member's id, so the client can suggest it; new names cannot be added once the splitter is locked. A signed-in joiner can link the member to their account (`linkAccount`), and an account can be linked to only one member per splitter.
+
+**Who can open a splitter** (`canRead`): the admin, a member linked to the signed-in account, or a device with a pick of an active member. `Splitter.me` is the linked member first, otherwise this device's latest pick. Roles still need sign-in (`roleOf`), so a device pick never gives treasurer rights.
 
 ## Transaction
 
