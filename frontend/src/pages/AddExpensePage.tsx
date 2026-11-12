@@ -10,6 +10,7 @@ import {
   type SplitMethod,
 } from '@bill-splitter/shared';
 import AmountInput from '../components/AmountInput';
+import { DisabledReason } from '../components/DisabledReason';
 import { Field } from '../components/SplitterForm';
 import { Avatar, Card, EmptyState, Icon, Loading, SectionTitle } from '../components/ui';
 import { GET_SPLITTER, type Member, type Splitter } from '../graphql/splitters';
@@ -370,15 +371,19 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
 function Stepper({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <button
-        type="button"
-        aria-label="One share less"
-        className={btn.small}
-        disabled={value <= 1}
-        onClick={() => onChange(value - 1)}
+      <DisabledReason
+        reason={value <= 1 && 'One share is the least. Untick the person to leave them out.'}
       >
-        −
-      </button>
+        <button
+          type="button"
+          aria-label="One share less"
+          className={btn.small}
+          disabled={value <= 1}
+          onClick={() => onChange(value - 1)}
+        >
+          −
+        </button>
+      </DisabledReason>
       <span className="w-6 text-center tabular-nums">{value}</span>
       <button
         type="button"
