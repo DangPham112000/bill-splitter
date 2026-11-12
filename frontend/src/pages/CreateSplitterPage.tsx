@@ -10,13 +10,15 @@ import {
   type EventManagerEvent,
   type Splitter,
 } from '../graphql/splitters';
-import { Field, SplitterForm } from '../components/SplitterForm';
-import { emptySplitterForm, inputClass, type SplitterFormValues } from '../lib/splitterForm';
+import { SplitterForm } from '../components/SplitterForm';
+import { EventPicker } from '../components/EventPicker';
+import { ParticipantsEditor, type LinkedRow } from '../components/ParticipantsEditor';
+import { emptySplitterForm, type SplitterFormValues } from '../lib/splitterForm';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { Icon } from '../components/ui';
 import { btn } from '../lib/styles';
 import { useAuthState } from '../lib/useAuthState';
-import { eventDayLabel, formFromEvent } from '../lib/eventPrefill';
+import { formFromEvent } from '../lib/eventPrefill';
 
 const ME_NAME = gql`
   query MeName {
@@ -26,9 +28,6 @@ const ME_NAME = gql`
     }
   }
 `;
-
-/** An attendee of the picked event, offered as a starting member tied to their account. */
-type LinkedRow = { clerkId: string; name: string; interested: boolean; include: boolean };
 
 /** Everyone but the admin; people only "interested" start unticked. */
 const rowsFromEvent = (event: EventManagerEvent): LinkedRow[] =>
@@ -40,9 +39,6 @@ const rowsFromEvent = (event: EventManagerEvent): LinkedRow[] =>
       interested: a.participation === 'INTERESTED',
       include: a.participation === 'JOINED',
     }));
-
-/** "Phạm Đăng" → one name per line, empty lines dropped. */
-const parseNames = (text: string) => text.split('\n').map(cleanName).filter(Boolean);
 
 export function CreateSplitterPage() {
   const { isLoaded, isSignedIn } = useAuthState();
@@ -80,14 +76,14 @@ function CreateSplitterForm() {
   const { data: me } = useQuery<{ me: { name: string | null } | null }>(ME_NAME);
   // null until edited, so the account name can fill it in once it loads.
   const [adminName, setAdminName] = useState<string | null>(null);
-  const [memberNames, setMemberNames] = useState('');
+  const [memberNames, setMemberNames] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [createSplitter, { loading }] = useMutation<{ createSplitter: Splitter }>(CREATE_SPLITTER, {
     refetchQueries: [MY_SPLITTERS],
   });
 
   const shownAdminName = adminName ?? me?.me?.name ?? '';
-  const memberCount = parseNames(memberNames).length;
+  const otherNames = memberNames.map(cleanName).filter(Boolean);
   const initial = event ? formFromEvent(event) : emptySplitterForm;
 
   const submit = async (values: SplitterFormValues) => {
@@ -96,7 +92,7 @@ function CreateSplitterForm() {
     const clash = findSameName([
       cleanName(shownAdminName),
       ...linkedMembers.map((m) => m.name),
-      ...parseNames(memberNames),
+      ...otherNames,
     ]);
     if (clash) return setError(`"${clash.name}" is the same name as "${clash.sameAs}"`);
     setError(null);
@@ -113,7 +109,7 @@ function CreateSplitterForm() {
             currency: values.currency,
             hasInitialFund: values.hasInitialFund,
             adminName: cleanName(shownAdminName),
-            memberNames: parseNames(memberNames),
+            memberNames: otherNames,
             eventManagerEventId: event?.id ?? null,
             linkedMembers,
           },
@@ -149,101 +145,15 @@ function CreateSplitterForm() {
         error={error}
         onSubmit={submit}
       >
-        <Field label="Your name in this splitter" hint="You will be its admin.">
-          <input
-            className={inputClass}
-            value={shownAdminName}
-            onChange={(e) => setAdminName(e.target.value)}
-            maxLength={50}
-            required
-          />
-        </Field>
-        {event && rows.length > 0 && (
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1.5 text-sm font-medium text-foreground/90">
-              People from the event ({linkedMembers.length})
-            </legend>
-            <ul className="flex flex-col gap-2">
-              {rows.map((row, index) => (
-                <li key={row.clerkId} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    checked={row.include}
-                    onChange={(e) => setRow(index, { include: e.target.checked })}
-                    aria-label={`Add ${row.name}`}
-                  />
-                  <input
-                    className={`${inputClass} py-1.5`}
-                    value={row.name}
-                    onChange={(e) => setRow(index, { name: e.target.value })}
-                    maxLength={50}
-                    disabled={!row.include}
-                  />
-                  {row.interested && (
-                    <span className="shrink-0 text-xs text-muted-foreground">Interested</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <span className="text-xs text-muted-foreground">
-              Their names are tied to their accounts, so the splitter shows up in their list when
-              they sign in.
-            </span>
-          </fieldset>
-        )}
-        <Field
-          label={`Other members (optional${memberCount ? `, ${memberCount}` : ''})`}
-          hint="One name per line. People pick their name when they join, and can still add a new one."
-        >
-          <textarea
-            className={`${inputClass} min-h-28`}
-            value={memberNames}
-            onChange={(e) => setMemberNames(e.target.value)}
-            placeholder={'Minh\nLan\nTuấn'}
-          />
-        </Field>
+        <ParticipantsEditor
+          adminName={shownAdminName}
+          onAdminName={setAdminName}
+          eventRows={rows}
+          onEventRow={setRow}
+          names={memberNames}
+          onNames={setMemberNames}
+        />
       </SplitterForm>
-    </div>
-  );
-}
-
-function EventPicker({
-  events,
-  loading,
-  failed,
-  value,
-  onChange,
-}: {
-  events: EventManagerEvent[] | undefined;
-  loading: boolean;
-  failed: boolean;
-  value: string;
-  onChange: (eventId: string) => void;
-}) {
-  let hint = 'Fills in the name, description, dates and people from the event.';
-  if (loading) hint = 'Loading your events…';
-  else if (failed)
-    hint = 'Event Manager cannot be reached right now. You can still fill the form in.';
-  else if (!events?.length) hint = 'You have no events in Event Manager yet.';
-
-  return (
-    <div className="rounded-2xl border border-primary/25 bg-primary-soft p-4">
-      <Field label="Start from an Event Manager event (optional)" hint={hint}>
-        <select
-          className={inputClass}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={loading || failed || !events?.length}
-        >
-          <option value="">No event</option>
-          {events?.map((event) => (
-            <option key={event.id} value={event.id}>
-              {eventDayLabel(event)} · {event.title}
-            </option>
-          ))}
-        </select>
-      </Field>
     </div>
   );
 }
