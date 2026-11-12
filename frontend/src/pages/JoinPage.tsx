@@ -106,7 +106,10 @@ function JoinForm({ token, invite }: { token: string; invite: InvitePreview }) {
   const [join, { loading: joining }] = useMutation<
     { joinSplitter: Splitter },
     { token: string; input: JoinSplitterInput }
-  >(JOIN_SPLITTER);
+  >(JOIN_SPLITTER, {
+    // The splitter now belongs in the sidebar and home list (DAN-39).
+    refetchQueries: ['MySplitters'],
+  });
 
   const members = invite.members;
   const locked = invite.status === 'locked';

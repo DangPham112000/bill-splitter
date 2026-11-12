@@ -216,6 +216,13 @@ export const transactionResolvers = {
 
   Splitter: {
     me: (splitter: SplitterDoc, _args: unknown, context: Context) => myMember(splitter, context),
+    canLinkAccount: async (splitter: SplitterDoc, _args: unknown, context: Context) => {
+      if (!context.clerkId) return false;
+      // myMember prefers the account's own member, so an unlinked result means the account is
+      // not in this splitter and the device's name is free to link.
+      const me = await myMember(splitter, context);
+      return Boolean(me && !me.userId);
+    },
 
     transactions: async (splitter: SplitterDoc) => {
       const [transactions, members] = await Promise.all([

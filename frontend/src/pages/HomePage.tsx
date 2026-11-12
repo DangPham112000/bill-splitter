@@ -18,10 +18,11 @@ const STEPS = [
 ];
 
 export function HomePage() {
-  const { isSignedIn } = useAuthState();
+  const { isLoaded, isSignedIn } = useAuthState();
   const isDesktop = useIsDesktop();
+  // Signed out too: splitters joined through the link on this device (DAN-39).
   const { data, loading } = useQuery<{ mySplitters: Splitter[] }>(MY_SPLITTERS, {
-    skip: !isSignedIn,
+    skip: !isLoaded,
   });
   const splitters = data?.mySplitters ?? [];
   const hasSplitters = splitters.length > 0;
@@ -61,9 +62,9 @@ export function HomePage() {
         </section>
       )}
 
-      {isSignedIn && (
+      {(isSignedIn || hasSplitters) && (
         <section className="flex flex-col gap-2">
-          <SectionTitle>My splitters</SectionTitle>
+          <SectionTitle>{isSignedIn ? 'My splitters' : 'Joined on this device'}</SectionTitle>
           {loading ? (
             <Loading />
           ) : hasSplitters ? (

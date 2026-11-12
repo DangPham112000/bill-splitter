@@ -26,6 +26,8 @@ export type Splitter = {
   members: Member[];
   /** The caller's own member here, null until they join. */
   me: Member | null;
+  /** Signed in, and this device's name here has no account yet: it can be linked. */
+  canLinkAccount: boolean;
   linkedEvent: LinkedEvent | null;
 };
 
@@ -78,6 +80,7 @@ export const SPLITTER_FIELDS = gql`
       role
       hasAccount
     }
+    canLinkAccount
     linkedEvent {
       app
       id
@@ -301,4 +304,13 @@ export const SET_MEMBER_ROLE = gql`
       ${MEMBERS_RESULT}
     }
   }
+`;
+
+export const LINK_MY_ACCOUNT = gql`
+  mutation LinkMyAccount($splitterId: ID!) {
+    linkMyAccount(splitterId: $splitterId) {
+      ...SplitterFields
+    }
+  }
+  ${SPLITTER_FIELDS}
 `;
