@@ -137,8 +137,8 @@ export function EventPicker({ events, loading, failed, value, onChange }: Props)
     <div
       className={
         isDesktop
-          ? 'absolute inset-x-0 top-full z-40 mt-2 flex max-h-[min(30rem,65vh)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl'
-          : 'fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-3xl bg-card pb-[env(safe-area-inset-bottom)] shadow-xl'
+          ? 'absolute inset-x-0 top-full z-40 mt-2 flex max-h-[min(30rem,65vh)] flex-col overflow-hidden glass-strong rounded-3xl'
+          : 'fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-hidden glass-strong rounded-t-3xl border-b-0 pb-[env(safe-area-inset-bottom)]'
       }
       onKeyDown={onListKey}
       role="dialog"
@@ -316,7 +316,7 @@ export function EventPicker({ events, loading, failed, value, onChange }: Props)
         !isDesktop &&
         createPortal(
           <>
-            <div className="fixed inset-0 z-50 bg-overlay" onClick={close} aria-hidden />
+            <div className="backdrop-dim fixed inset-0 z-50" onClick={close} aria-hidden />
             {panel}
           </>,
           document.body,

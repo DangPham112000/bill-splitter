@@ -90,7 +90,7 @@ export function ExpenseList({
         <Link
           to={`/s/${splitterId}/expenses/new`}
           aria-label="Add expense"
-          className="fixed right-5 bottom-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary-hover lg:hidden"
+          className="glass-primary fixed right-5 bottom-6 z-30 flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground transition-[filter,transform] hover:brightness-105 active:scale-95 lg:hidden"
         >
           <Icon name="plus" className="h-6 w-6" />
         </Link>

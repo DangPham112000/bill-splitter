@@ -262,7 +262,7 @@ export function SplitterForm({
       {children}
 
       {/* On a phone the button stays at the bottom of the screen, like an app's main action. */}
-      <div className="sticky bottom-0 z-20 -mx-4 flex flex-col gap-2 bg-gradient-to-t from-background via-background to-background/0 px-4 pt-6 pb-4 lg:static lg:mx-0 lg:bg-none lg:p-0">
+      <div className="sticky bottom-0 z-20 -mx-4 flex flex-col gap-2 glass-strong rounded-none border-x-0 border-b-0 px-4 pt-3 pb-4 lg:static lg:mx-0 lg:border-0 lg:bg-none lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none">
         {shownError && (
           <p
             role="alert"

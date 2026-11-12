@@ -56,7 +56,7 @@ export function InvitePanel({ splitterId, splitterName, token, joiningEnabled }:
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary-soft p-4 text-left">
+    <section className="flex flex-col gap-3 glass rounded-3xl bg-gradient-to-br from-primary-soft to-transparent p-4 text-left">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold text-primary-soft-foreground">
           <Icon name="share" className="h-4 w-4" />
@@ -143,11 +143,11 @@ function QrDialog({ link, name, onClose }: { link: string; name: string; onClose
       aria-modal="true"
       aria-label={`QR code to join ${name}`}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-dim p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-card p-6 text-center shadow-xl"
+        className="flex w-full max-w-sm flex-col items-center gap-4 glass-strong rounded-3xl p-6 text-center"
       >
         <h2 className="text-lg font-semibold break-words">{name}</h2>
         <div className="rounded-2xl bg-white p-3">

@@ -4,6 +4,10 @@
 /*
  * Theme tokens. Same palette as Event Manager (orange primary on violet-tinted neutrals), so the
  * ecosystem apps feel like one family. Light or dark follows the system setting.
+ *
+ * "Liquid glass" look (2026-11-12): surfaces are translucent, blurred panes floating over a soft
+ * colored backdrop, with a bright top edge like light on glass. Text always sits on a pane that is
+ * opaque enough to keep the contrast of the old solid colors; see the fallbacks at the bottom.
  */
 @theme inline {
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
@@ -31,29 +35,33 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-overlay: var(--overlay);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-glass-border: var(--glass-border);
 
   --radius-lg: 0.625rem;
   --radius-xl: 0.875rem;
   --radius-2xl: 1.125rem;
+  --radius-3xl: 1.625rem;
 }
 
 :root {
   color-scheme: light;
   --background: oklch(0.985 0.005 275);
   --foreground: oklch(0.175 0.02 275);
-  --card: oklch(1 0 0);
+  --card: oklch(1 0 0 / 0.72);
   --card-foreground: oklch(0.175 0.02 275);
-  --muted: oklch(0.955 0.01 275);
+  --muted: oklch(0.45 0.03 275 / 0.07);
   --muted-foreground: oklch(0.5 0.02 275);
-  --accent: oklch(0.94 0.02 275);
+  --accent: oklch(0.45 0.05 275 / 0.11);
   --accent-foreground: oklch(0.25 0.04 275);
-  --border: oklch(0.9 0.01 275);
-  --input: oklch(0.88 0.012 275);
+  --border: oklch(0.4 0.03 275 / 0.11);
+  --input: oklch(0.4 0.03 275 / 0.16);
   --ring: oklch(0.6 0.19 45);
   --primary: oklch(0.6 0.19 45);
   --primary-hover: oklch(0.55 0.19 45);
   --primary-foreground: oklch(0.985 0.005 275);
-  --primary-soft: oklch(0.96 0.04 55);
+  --primary-soft: oklch(0.8 0.13 55 / 0.2);
   --primary-soft-foreground: oklch(0.45 0.15 45);
   --destructive: oklch(0.56 0.22 27);
   --destructive-soft: oklch(0.96 0.03 27);
@@ -61,7 +69,21 @@
   --success-soft: oklch(0.96 0.04 155);
   --warning: oklch(0.55 0.13 75);
   --warning-soft: oklch(0.96 0.05 85);
-  --overlay: oklch(0.175 0.02 275 / 0.55);
+  --overlay: oklch(0.175 0.02 275 / 0.3);
+
+  /* Glass panes: fill, a brighter one for dialogs and sheets, edge, top highlight and shadow. */
+  --glass: oklch(1 0 0 / 0.55);
+  --glass-strong: oklch(1 0 0 / 0.8);
+  --glass-border: oklch(1 0 0 / 0.7);
+  --glass-highlight: oklch(1 0 0 / 0.95);
+  --glass-sheen: oklch(1 0 0 / 0.45);
+  --glass-thumb: oklch(1 0 0 / 0.92);
+  --glass-shadow: oklch(0.35 0.06 275 / 0.1);
+  /* The colored light behind the glass. */
+  --backdrop-base: oklch(0.97 0.012 275);
+  --backdrop-1: oklch(0.86 0.11 55 / 0.55);
+  --backdrop-2: oklch(0.82 0.08 290 / 0.5);
+  --backdrop-3: oklch(0.88 0.07 200 / 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -69,19 +91,19 @@
     color-scheme: dark;
     --background: oklch(0.175 0.015 275);
     --foreground: oklch(0.93 0.01 275);
-    --card: oklch(0.215 0.02 275);
+    --card: oklch(0.3 0.025 275 / 0.55);
     --card-foreground: oklch(0.93 0.01 275);
-    --muted: oklch(0.25 0.02 275);
+    --muted: oklch(0.9 0.02 275 / 0.07);
     --muted-foreground: oklch(0.68 0.02 275);
-    --accent: oklch(0.28 0.03 275);
+    --accent: oklch(0.9 0.03 275 / 0.11);
     --accent-foreground: oklch(0.93 0.01 275);
-    --border: oklch(0.3 0.02 275);
-    --input: oklch(0.34 0.02 275);
+    --border: oklch(0.9 0.02 275 / 0.1);
+    --input: oklch(0.9 0.02 275 / 0.16);
     --ring: oklch(0.68 0.19 45);
     --primary: oklch(0.68 0.19 45);
     --primary-hover: oklch(0.73 0.17 45);
     --primary-foreground: oklch(0.985 0.005 275);
-    --primary-soft: oklch(0.3 0.07 45);
+    --primary-soft: oklch(0.68 0.19 45 / 0.2);
     --primary-soft-foreground: oklch(0.85 0.1 55);
     --destructive: oklch(0.68 0.2 25);
     --destructive-soft: oklch(0.3 0.07 25);
@@ -89,8 +111,73 @@
     --success-soft: oklch(0.3 0.06 155);
     --warning: oklch(0.78 0.13 80);
     --warning-soft: oklch(0.3 0.06 80);
-    --overlay: oklch(0.1 0.01 275 / 0.7);
+    --overlay: oklch(0.1 0.01 275 / 0.45);
+
+    --glass: oklch(0.32 0.03 275 / 0.42);
+    --glass-strong: oklch(0.25 0.025 275 / 0.82);
+    --glass-border: oklch(1 0 0 / 0.1);
+    --glass-highlight: oklch(1 0 0 / 0.16);
+    --glass-sheen: oklch(1 0 0 / 0.05);
+    --glass-thumb: oklch(0.5 0.03 275 / 0.6);
+    --glass-shadow: oklch(0 0 0 / 0.35);
+    --backdrop-base: oklch(0.16 0.02 275);
+    --backdrop-1: oklch(0.55 0.17 45 / 0.42);
+    --backdrop-2: oklch(0.48 0.17 290 / 0.5);
+    --backdrop-3: oklch(0.5 0.11 210 / 0.35);
   }
+}
+
+/*
+ * A pane of glass: translucent fill with a faint sheen at the top, blurred and saturated backdrop,
+ * a light edge and a bright top highlight.
+ */
+@utility glass {
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 45%), var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    0 1px 2px 0 var(--glass-shadow),
+    0 8px 28px -6px var(--glass-shadow);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+
+/* Brighter, more opaque glass for things on top: dialogs, sheets, menus, bars. */
+@utility glass-strong {
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 45%), var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    0 2px 6px 0 var(--glass-shadow),
+    0 24px 60px -12px var(--glass-shadow);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+}
+
+/* Glass tinted with the primary color, for the main action: lit from the top, glowing below. */
+@utility glass-primary {
+  background: linear-gradient(180deg, oklch(1 0 0 / 0.2), oklch(1 0 0 / 0) 50%), var(--primary);
+  border: 1px solid oklch(1 0 0 / 0.25);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.45),
+    inset 0 -1px 0 0 oklch(0 0 0 / 0.08),
+    0 6px 18px -6px color-mix(in oklch, var(--primary) 70%, transparent);
+}
+
+/* The selected segment of a segmented control (tabs, split method): a lighter lens on the glass. */
+@utility glass-thumb {
+  background: var(--glass-thumb);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    0 1px 3px 0 var(--glass-shadow),
+    0 4px 12px -4px var(--glass-shadow);
+}
+
+/* Blur for the dimmed layer behind a dialog. */
+@utility backdrop-dim {
+  background: var(--overlay);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 @layer base {
@@ -98,10 +185,40 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-background font-sans text-foreground antialiased;
+    @apply font-sans text-foreground antialiased;
+    min-height: 100dvh;
+    background-color: var(--backdrop-base);
+    /* Soft colored light behind the glass; fixed so panes keep something to blur while scrolling. */
+    background-image:
+      radial-gradient(42rem 32rem at 8% -6%, var(--backdrop-1), transparent 70%),
+      radial-gradient(38rem 34rem at 100% 10%, var(--backdrop-2), transparent 70%),
+      radial-gradient(44rem 30rem at 55% 108%, var(--backdrop-3), transparent 70%);
+    background-attachment: fixed;
   }
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
+  }
+}
+
+/*
+ * Fallbacks, so text never loses contrast: browsers without backdrop blur, and people who asked
+ * their system for less transparency, get solid panes in the same colors.
+ */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass: var(--background);
+    --glass-strong: var(--background);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: var(--background);
+    --glass-strong: var(--background);
+    --card: var(--background);
+  }
+  body {
+    background-image: none;
   }
 }

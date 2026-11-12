@@ -18,7 +18,7 @@ export function Layout() {
   if (isDesktop) {
     return (
       <div className="flex min-h-dvh">
-        <aside className="sticky top-0 flex h-dvh w-72 shrink-0 flex-col gap-5 border-r border-border bg-card px-4 py-5">
+        <aside className="glass sticky top-3 m-3 mr-0 flex h-[calc(100dvh-1.5rem)] w-72 shrink-0 flex-col gap-5 rounded-3xl px-4 py-5">
           <div className="flex items-center justify-between px-2">
             <Brand />
           </div>
@@ -27,7 +27,7 @@ export function Layout() {
             New splitter
           </Link>
           <SplitterNav />
-          <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
+          <div className="mt-auto flex flex-col gap-3 border-t border-glass-border pt-4">
             {authEnabled && (
               <div className="px-2">
                 <AccountMenu showName />
@@ -47,7 +47,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+      <header className="glass-strong sticky top-0 z-30 rounded-none border-x-0 border-t-0">
         <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-4">
           <Brand />
           {authEnabled && <AccountMenu />}

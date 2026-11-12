@@ -35,14 +35,14 @@ export function DeviceNicknameDialog({ onClose, reason }: Props) {
   // A portal, so a sticky parent (the desktop side column) cannot trap it under other parts.
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-overlay p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center backdrop-dim p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="device-nickname-title"
     >
       <form
         onSubmit={submit}
-        className="flex w-full max-w-md flex-col gap-4 rounded-3xl bg-card p-5 shadow-xl"
+        className="flex w-full max-w-md flex-col gap-4 glass-strong rounded-3xl p-5"
       >
         <div className="flex flex-col gap-1">
           <h2 id="device-nickname-title" className="text-lg font-semibold">
