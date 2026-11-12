@@ -14,6 +14,7 @@ import {
   type Splitter,
 } from '../graphql/splitters';
 import { DeviceNicknameDialog } from '../components/DeviceNicknameDialog';
+import { DisabledReason } from '../components/DisabledReason';
 import { Avatar, EmojiTile, Loading } from '../components/ui';
 import { useDevice } from '../lib/deviceContext';
 import { btn, cardClass, inputClass } from '../lib/styles';
@@ -182,29 +183,38 @@ function JoinForm({ token, invite }: { token: string; invite: InvitePreview }) {
             const selected = !isNew && pickedId === member.id;
             return (
               <li key={member.id}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  disabled={disabled}
-                  onClick={() => pick(member)}
-                  className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-50 ${
-                    selected
-                      ? 'border-primary bg-primary-soft'
-                      : 'border-border hover:bg-muted disabled:hover:bg-transparent'
-                  }`}
+                <DisabledReason
+                  className="flex w-full"
+                  reason={
+                    disabled &&
+                    `${member.displayName} is linked to someone else's account, so only they ` +
+                      'can pick it. If this is you, sign in with that account.'
+                  }
                 >
-                  <Avatar name={member.displayName} size="sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{member.displayName}</span>
-                    <MemberHint member={member} takenByOther={disabled} />
-                  </span>
-                  {ROLE_LABELS[member.role] && (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      {ROLE_LABELS[member.role]}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    disabled={disabled}
+                    onClick={() => pick(member)}
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-50 ${
+                      selected
+                        ? 'border-primary bg-primary-soft'
+                        : 'border-border hover:bg-muted disabled:hover:bg-transparent'
+                    }`}
+                  >
+                    <Avatar name={member.displayName} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{member.displayName}</span>
+                      <MemberHint member={member} takenByOther={disabled} />
                     </span>
-                  )}
-                </button>
+                    {ROLE_LABELS[member.role] && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        {ROLE_LABELS[member.role]}
+                      </span>
+                    )}
+                  </button>
+                </DisabledReason>
               </li>
             );
           })}
@@ -296,9 +306,21 @@ function JoinForm({ token, invite }: { token: string; invite: InvitePreview }) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <button type="submit" disabled={!ready} className={`${btn.primary} w-full py-3`}>
-        {device === null ? 'Getting this device ready…' : choice ? `Join as ${choice}` : 'Join'}
-      </button>
+      <DisabledReason
+        className="flex w-full"
+        reason={
+          device !== null &&
+          !joining &&
+          !choice &&
+          (isNew && sameName
+            ? `"${sameName.displayName}" is already here. Pick it above, or type a different name.`
+            : 'Pick your name above, or add yourself with a new one.')
+        }
+      >
+        <button type="submit" disabled={!ready} className={`${btn.primary} w-full py-3`}>
+          {device === null ? 'Getting this device ready…' : choice ? `Join as ${choice}` : 'Join'}
+        </button>
+      </DisabledReason>
 
       {joinedId && (
         <DeviceNicknameDialog

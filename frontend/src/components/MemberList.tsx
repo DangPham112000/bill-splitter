@@ -11,6 +11,7 @@ import {
 } from '../graphql/splitters';
 import { btn, cardClass, inputClass } from '../lib/styles';
 import { Avatar, SectionTitle } from './ui';
+import { DisabledReason } from './DisabledReason';
 
 const ROLE_LABELS: Record<MemberRole, string | null> = {
   admin: 'Admin',
@@ -158,24 +159,29 @@ function MemberRow({
             Rename
           </button>
           {member.role !== 'admin' && (
-            <button
-              type="button"
-              onClick={toggleTreasurer}
-              // A treasurer needs an account, so their rights follow them to any device.
-              disabled={settingRole.loading || (!isTreasurer && !member.hasAccount)}
-              title={
-                !isTreasurer && !member.hasAccount
-                  ? 'They need to sign in and join with this name first'
-                  : undefined
+            // A treasurer needs an account, so their rights follow them to any device.
+            <DisabledReason
+              reason={
+                !isTreasurer &&
+                !member.hasAccount &&
+                `${member.displayName} hasn't linked an account yet. They can become treasurer ` +
+                  'after opening the invite link while signed in and picking this name with ' +
+                  '"Link this name to my account" ticked.'
               }
-              className={smallButton}
             >
-              {settingRole.loading
-                ? 'Saving…'
-                : isTreasurer
-                  ? 'Remove treasurer'
-                  : 'Make treasurer'}
-            </button>
+              <button
+                type="button"
+                onClick={toggleTreasurer}
+                disabled={settingRole.loading || (!isTreasurer && !member.hasAccount)}
+                className={smallButton}
+              >
+                {settingRole.loading
+                  ? 'Saving…'
+                  : isTreasurer
+                    ? 'Remove treasurer'
+                    : 'Make treasurer'}
+              </button>
+            </DisabledReason>
           )}
           {member.role !== 'admin' && (
             <button
@@ -237,13 +243,15 @@ function RenameRow({
         {clash && <p className="text-sm text-warning">Same name as "{clash.displayName}".</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={renaming.loading || !cleanName(name) || Boolean(clash)}
-            className={`${btn.primary} px-3 py-1.5 text-sm`}
-          >
-            {renaming.loading ? 'Saving…' : 'Save'}
-          </button>
+          <DisabledReason reason={nameProblem(name, clash)}>
+            <button
+              type="submit"
+              disabled={renaming.loading || !cleanName(name) || Boolean(clash)}
+              className={`${btn.primary} px-3 py-1.5 text-sm`}
+            >
+              {renaming.loading ? 'Saving…' : 'Save'}
+            </button>
+          </DisabledReason>
           <button type="button" onClick={onDone} className={smallButton}>
             Cancel
           </button>
@@ -251,6 +259,13 @@ function RenameRow({
       </form>
     </li>
   );
+}
+
+/** Why a name can't be saved yet, for the disabled Save and Add buttons. */
+function nameProblem(name: string, clash: Member | undefined): string | null {
+  if (!cleanName(name)) return 'Type a name first.';
+  if (clash) return `"${clash.displayName}" is already in this splitter.`;
+  return null;
 }
 
 function AddMemberForm({ splitterId, members }: { splitterId: string; members: Member[] }) {
@@ -282,13 +297,15 @@ function AddMemberForm({ splitterId, members }: { splitterId: string; members: M
           aria-label="New member's name"
           className={`${inputClass} min-w-0 flex-1`}
         />
-        <button
-          type="submit"
-          disabled={adding.loading || !cleanName(name) || Boolean(clash)}
-          className={`${btn.primary} px-3 py-2 text-sm`}
-        >
-          {adding.loading ? 'Adding…' : 'Add'}
-        </button>
+        <DisabledReason reason={nameProblem(name, clash)}>
+          <button
+            type="submit"
+            disabled={adding.loading || !cleanName(name) || Boolean(clash)}
+            className={`${btn.primary} px-3 py-2 text-sm`}
+          >
+            {adding.loading ? 'Adding…' : 'Add'}
+          </button>
+        </DisabledReason>
       </div>
       {clash ? (
         <p className="px-1 text-sm text-warning">
