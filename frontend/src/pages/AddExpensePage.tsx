@@ -250,7 +250,7 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
           Split between ({participants.length})
         </SectionTitle>
 
-        <div className="flex rounded-xl bg-muted p-1" role="radiogroup" aria-label="Split method">
+        <div className="glass flex rounded-full p-1" role="radiogroup" aria-label="Split method">
           {METHODS.map((m) => (
             <button
               key={m.id}
@@ -258,9 +258,9 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
               role="radio"
               aria-checked={method === m.id}
               onClick={() => setMethod(m.id)}
-              className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 method === m.id
-                  ? 'bg-card text-foreground shadow-sm'
+                  ? 'glass-thumb text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -359,7 +359,7 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
       )}
 
       {/* Stays in reach of the thumb on a phone. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/90 p-3 backdrop-blur lg:static lg:border-0 lg:bg-transparent lg:p-0">
+      <div className="fixed inset-x-0 bottom-0 z-30 glass-strong rounded-none border-x-0 border-b-0 p-3 lg:static lg:border-0 lg:bg-none lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none">
         <button type="submit" disabled={saving} className={`${btn.primary} w-full py-3 text-base`}>
           {saving ? 'Saving…' : amount ? `Add ${formatAmount(amount, splitter.currency)}` : 'Add'}
         </button>

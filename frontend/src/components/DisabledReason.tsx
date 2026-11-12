@@ -117,7 +117,7 @@ export function DisabledReason({ reason, children, className = '' }: Props) {
             top: position?.top ?? 0,
             visibility: position ? 'visible' : 'hidden',
           }}
-          className="fixed z-50 w-max max-w-64 rounded-lg bg-foreground px-3 py-2 text-left text-xs leading-snug font-normal text-background shadow-lg"
+          className="fixed z-50 w-max max-w-64 rounded-xl bg-foreground/90 px-3 py-2 backdrop-blur-md text-left text-xs leading-snug font-normal text-background shadow-lg"
         >
           {reason}
         </span>

@@ -97,9 +97,9 @@ function SplitterView({ splitter }: { splitter: Splitter }) {
         <div
           role="tablist"
           aria-label="Splitter sections"
-          className="sticky top-14 z-20 -mx-4 bg-background/85 px-4 py-2 backdrop-blur lg:static lg:z-auto lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
+          className="sticky top-16 z-20 lg:static lg:z-auto"
         >
-          <div className="flex rounded-xl bg-muted p-1">
+          <div className="glass flex rounded-full p-1">
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -107,9 +107,9 @@ function SplitterView({ splitter }: { splitter: Splitter }) {
                 role="tab"
                 aria-selected={shownTab === t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
                   shownTab === t.id
-                    ? 'bg-card text-foreground shadow-sm'
+                    ? 'glass-thumb text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -193,7 +193,7 @@ function SplitterHeader({ splitter }: { splitter: Splitter }) {
   ].filter(Boolean);
 
   return (
-    <header className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary-soft to-card p-4 lg:p-6">
+    <header className="glass overflow-hidden rounded-3xl bg-gradient-to-br from-primary-soft to-transparent p-4 lg:p-6">
       <div className="flex items-center justify-between gap-2">
         <Link to="/" className={`${btn.ghost} -ml-2 px-2 py-1 text-sm lg:hidden`}>
           <Icon name="back" className="h-4 w-4" />
@@ -230,7 +230,7 @@ function SplitterHeader({ splitter }: { splitter: Splitter }) {
               href={splitter.linkedEvent.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1 text-sm font-medium text-primary shadow-sm hover:bg-muted"
+              className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium text-primary-soft-foreground hover:bg-card"
             >
               Open in Event Manager
               <Icon name="external" className="h-3.5 w-3.5" />

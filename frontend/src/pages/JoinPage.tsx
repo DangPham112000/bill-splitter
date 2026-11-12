@@ -60,7 +60,7 @@ export function JoinPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 lg:pt-8">
       <div className={`${cardClass} overflow-hidden`}>
-        <div className="flex flex-col items-center gap-3 bg-gradient-to-b from-primary-soft to-card px-6 pt-8 pb-6 text-center">
+        <div className="flex flex-col items-center gap-3 bg-gradient-to-b from-primary-soft to-transparent px-6 pt-8 pb-6 text-center">
           <EmojiTile emoji={invite.coverEmoji || DEFAULT_EMOJI[invite.type]} size="lg" />
           <p className="text-sm text-muted-foreground">You are invited to</p>
           <h1 className="text-2xl font-semibold tracking-tight break-words">{invite.name}</h1>

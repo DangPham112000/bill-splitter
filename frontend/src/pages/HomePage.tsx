@@ -30,7 +30,7 @@ export function HomePage() {
   return (
     <div className="flex flex-col gap-6">
       {(!isSignedIn || (!loading && !hasSplitters) || isDesktop) && (
-        <section className="overflow-hidden rounded-3xl bg-primary px-6 py-8 text-primary-foreground lg:px-10 lg:py-12">
+        <section className="glass-primary overflow-hidden rounded-3xl px-6 py-8 text-primary-foreground lg:px-10 lg:py-12">
           <h1 className="text-2xl font-semibold tracking-tight lg:text-4xl">
             Split costs with your group
           </h1>
@@ -40,7 +40,7 @@ export function HomePage() {
           </p>
           <Link
             to="/new"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-card px-5 py-3 font-semibold text-primary shadow-sm hover:bg-card/90"
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/85 px-5 py-3 font-semibold text-[oklch(0.5_0.17_45)] shadow-[inset_0_1px_0_white,0_6px_16px_-6px_rgb(0_0_0/0.25)] backdrop-blur-md transition-colors hover:bg-white"
           >
             <Icon name="plus" />
             Create a splitter
@@ -88,7 +88,7 @@ export function HomePage() {
         <Link
           to="/new"
           aria-label="Create a splitter"
-          className={`${btn.primary} fixed right-5 bottom-6 z-20 h-14 rounded-full px-5 shadow-lg`}
+          className={`${btn.primary} fixed right-5 bottom-6 z-20 h-14 px-5`}
         >
           <Icon name="plus" />
           New
