@@ -5,7 +5,7 @@ import { requireClerkId, requireSessionToken, type Context } from '../auth.js';
 import { eventUrl, getEvent, listEvents, type EventManagerEvent } from '../eventManager.js';
 import { findUser } from '../coreUsers.js';
 import { roleOf } from '../permissions.js';
-import { deviceMember } from '../memberDevices.js';
+import { deviceMember, splittersJoinedOnDevice } from '../memberDevices.js';
 import {
   cleanName,
   daysFromEvent,
@@ -250,14 +250,17 @@ export async function findAdministered(id: string, context: Context): Promise<Sp
 
 export const splitterResolvers = {
   Query: {
+    // Signed in or not: a device that joined through the link sees those splitters too (DAN-39).
     mySplitters: async (_parent: unknown, _args: unknown, context: Context) => {
-      if (!context.clerkId) return [];
-      const linked = await MemberModel.find({ userId: context.clerkId, removedAt: null }).distinct(
-        'splitterId',
-      );
-      return SplitterModel.find({
-        $or: [{ adminUserId: context.clerkId }, { _id: { $in: linked } }],
-      }).sort({ createdAt: -1 });
+      const [linked, joined] = await Promise.all([
+        context.clerkId
+          ? MemberModel.find({ userId: context.clerkId, removedAt: null }).distinct('splitterId')
+          : [],
+        splittersJoinedOnDevice(context.deviceId),
+      ]);
+      const or: object[] = [{ _id: { $in: [...linked, ...joined] } }];
+      if (context.clerkId) or.push({ adminUserId: context.clerkId });
+      return SplitterModel.find({ $or: or }).sort({ createdAt: -1 });
     },
 
     splitter: (_parent: unknown, { id }: { id: string }, context: Context) =>

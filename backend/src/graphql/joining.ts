@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import { GraphQLError } from 'graphql';
 import { cleanName, normalizeName } from '@bill-splitter/shared';
-import type { Context } from '../auth.js';
+import { requireClerkId, type Context } from '../auth.js';
 import { requireDevice } from '../device.js';
-import { membersUsedOnDevice } from '../memberDevices.js';
+import { deviceMember, membersUsedOnDevice } from '../memberDevices.js';
 import {
   AuditLogModel,
   MemberDeviceModel,
@@ -17,6 +17,7 @@ import {
   canRead,
   countMembers,
   findByInviteToken,
+  findReadable,
   isDuplicateKey,
   saveOrBadInput,
 } from './splitters.js';
@@ -114,6 +115,42 @@ export const joiningResolvers = {
      * Join through the link (DAN-41): pick an existing name or add a new one, without signing in.
      * The choice is bound to this device, which can then open the splitter as that member.
      */
+    /**
+     * Link the name this device joined with to the signed-in account, for someone who joined
+     * signed out or without ticking "Link this name to my account".
+     */
+    linkMyAccount: async (
+      _parent: unknown,
+      { splitterId }: { splitterId: string },
+      context: Context,
+    ) => {
+      const clerkId = requireClerkId(context);
+      const splitter = await findReadable(splitterId, context);
+      const member = await deviceMember(splitter._id, context.deviceId);
+      if (!member) throw badInput('Join with the invite link on this device first');
+      if (member.userId === clerkId) return splitter;
+      if (member.userId) {
+        throw forbidden(`${member.displayName} is linked to someone else's account`);
+      }
+      // One account is one person: once linked to a name here, it cannot take another.
+      const mine = await linkedMember(splitter, clerkId);
+      if (mine) throw forbidden(`Your account is already in this splitter as ${mine.displayName}`);
+
+      member.userId = clerkId;
+      await member.save();
+      await AuditLogModel.create({
+        splitterId: splitter._id,
+        entity: 'member',
+        targetMemberId: member._id,
+        action: 'update',
+        memberId: member._id,
+        deviceId: context.deviceId ?? undefined,
+        before: { displayName: member.displayName, role: member.role, userId: null },
+        after: { displayName: member.displayName, role: member.role, userId: clerkId },
+      });
+      return splitter;
+    },
+
     joinSplitter: async (
       _parent: unknown,
       { token, input }: { token: string; input: JoinSplitterInput },

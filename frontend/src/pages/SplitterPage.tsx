@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { useQuery } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { currencySymbol } from '@bill-splitter/shared';
 import {
   DEFAULT_EMOJI,
   GET_SPLITTER,
+  LINK_MY_ACCOUNT,
   SPLITTER_TYPE_LABELS,
   formatDateRange,
   type Splitter,
@@ -89,6 +90,9 @@ function SplitterView({ splitter }: { splitter: Splitter }) {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
       <div className="flex min-w-0 flex-col gap-4">
         <SplitterHeader splitter={splitter} />
+        {splitter.canLinkAccount && splitter.me && (
+          <LinkAccountBanner splitterId={splitter.id} name={splitter.me.displayName} />
+        )}
 
         <div
           role="tablist"
@@ -140,6 +144,42 @@ function SplitterView({ splitter }: { splitter: Splitter }) {
 
       {isDesktop && <aside className="sticky top-8">{people}</aside>}
     </div>
+  );
+}
+
+/**
+ * For someone who joined signed out (or left "Link this name to my account" unticked) and has
+ * signed in since: one tap puts the splitter in My splitters on every device.
+ */
+function LinkAccountBanner({ splitterId, name }: { splitterId: string; name: string }) {
+  const [link, { loading }] = useMutation(LINK_MY_ACCOUNT, { refetchQueries: ['MySplitters'] });
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setError(null);
+    try {
+      await link({ variables: { splitterId } });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  return (
+    <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+      <p className="min-w-0 flex-1 text-sm">
+        You joined as <strong>{name}</strong> on this device only. Link this name to your account to
+        see this splitter in My splitters on every device you sign in on.
+        {error && <span className="mt-1 block text-destructive">{error}</span>}
+      </p>
+      <button
+        type="button"
+        onClick={submit}
+        disabled={loading}
+        className={`${btn.primary} shrink-0 text-sm`}
+      >
+        {loading ? 'Linking…' : 'Link to my account'}
+      </button>
+    </Card>
   );
 }
 

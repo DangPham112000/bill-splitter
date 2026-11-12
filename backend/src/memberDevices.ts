@@ -46,3 +46,16 @@ export async function membersUsedOnDevice(
   ]);
   return new Set([...created, ...picked, ...added].map((id) => id.toString()));
 }
+
+/**
+ * Splitters this device has joined through the link (DAN-39), skipping those where every name it
+ * picked has since been removed, like `deviceMember` does.
+ */
+export async function splittersJoinedOnDevice(
+  deviceId: string | null,
+): Promise<mongoose.Types.ObjectId[]> {
+  if (!deviceId) return [];
+  const picked = await MemberDeviceModel.find({ deviceId }).distinct('memberId');
+  if (!picked.length) return [];
+  return MemberModel.find({ _id: { $in: picked }, removedAt: null }).distinct('splitterId');
+}

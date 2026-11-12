@@ -102,6 +102,11 @@ export const typeDefs = `#graphql
     createdAt: String!
     "The caller's own member here, or null if they have not joined (DAN-43)."
     me: Member
+    """
+    True when the caller is signed in, joined on this device under a name no account has, and
+    their account is not in this splitter yet: linkMyAccount would link that name.
+    """
+    canLinkAccount: Boolean!
     "Live (not deleted) transactions, newest first."
     transactions: [Transaction!]!
     "Net balance of every member (DAN-51)."
@@ -364,7 +369,10 @@ export const typeDefs = `#graphql
     health: Health!
     "Null when the request is not signed in. Sign-in is optional."
     me: Me
-    "Splitters the signed-in user created or is linked to, newest first."
+    """
+    Splitters the signed-in user created or is linked to, plus those joined through the link on
+    this device (X-Device-Id), signed in or not (DAN-39). Newest first.
+    """
     mySplitters: [Splitter!]!
     "A splitter the caller created, is linked to, or joined on this device."
     splitter(id: ID!): Splitter
@@ -429,6 +437,12 @@ export const typeDefs = `#graphql
     phone, though entries made on the other device stay editable only there (DAN-47).
     """
     joinSplitter(token: String!, input: JoinSplitterInput!): Splitter!
+    """
+    Link the name this device joined with to the signed-in account, so the splitter is in My
+    splitters on every device and the name can be made treasurer. Refused when the name has
+    another account, or the account is already in this splitter under another name.
+    """
+    linkMyAccount(splitterId: ID!): Splitter!
     "Name this device, shown when someone tries to edit its entries elsewhere. Null or blank clears it."
     setDeviceNickname(nickname: String): ThisDevice!
   }
