@@ -1,6 +1,7 @@
 import { useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { cleanName, normalizeName } from '@bill-splitter/shared';
 import { cardClass } from '../lib/styles';
+import { DisabledReason } from './DisabledReason';
 import { Avatar, Icon, SectionTitle } from './ui';
 
 /** An attendee of the picked Event Manager event, offered as a member tied to their account. */
@@ -108,22 +109,28 @@ export function ParticipantsEditor({
         </li>
 
         {eventRows.map((row, index) => (
-          <li
-            key={row.clerkId}
-            className={`flex items-center gap-3 px-4 py-2.5 transition-opacity ${
-              row.include ? '' : 'opacity-55'
-            }`}
-          >
-            <Avatar name={row.name || '?'} size="sm" />
+          <li key={row.clerkId} className="flex items-center gap-3 px-4 py-2.5">
+            {/* Faded when left out; not the whole row, which would fade the tooltip too. */}
+            <span className={`transition-opacity ${row.include ? '' : 'opacity-55'}`}>
+              <Avatar name={row.name || '?'} size="sm" />
+            </span>
             <span className="min-w-0 flex-1">
-              <input
-                className={rowInput}
-                value={row.name}
-                onChange={(e) => onEventRow(index, { name: e.target.value })}
-                aria-label={`Name for ${row.name}`}
-                maxLength={50}
-                disabled={!row.include}
-              />
+              <DisabledReason
+                className="flex w-full"
+                reason={
+                  !row.include &&
+                  `${row.name || 'This person'} is left out. Tick them on the right to add them and edit their name.`
+                }
+              >
+                <input
+                  className={`${rowInput} disabled:opacity-55`}
+                  value={row.name}
+                  onChange={(e) => onEventRow(index, { name: e.target.value })}
+                  aria-label={`Name for ${row.name}`}
+                  maxLength={50}
+                  disabled={!row.include}
+                />
+              </DisabledReason>
               {clash(`event-${row.clerkId}`)}
             </span>
             {row.interested && (
