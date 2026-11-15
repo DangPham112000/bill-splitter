@@ -8,6 +8,7 @@ import { AddExpensePage } from './pages/AddExpensePage';
 import { EventSplitterPage } from './pages/EventSplitterPage';
 import { JoinPage } from './pages/JoinPage';
 import { SignInPage } from './pages/SignInPage';
+import { AiAgentsPage } from './pages/AiAgentsPage';
 import { authEnabled } from './lib/auth';
 import { Card, EmptyState } from './components/ui';
 
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="s/:id/expenses/new" element={<AddExpensePage />} />
         <Route path="join/:token" element={<JoinPage />} />
         <Route path="events/:eventId" element={<EventSplitterPage />} />
+        <Route path="agents" element={<AiAgentsPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

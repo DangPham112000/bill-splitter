@@ -8,6 +8,12 @@ import { resolvers } from './graphql/resolvers.js';
 import { getHealth } from './health.js';
 import { joinLinkPreview } from './linkPreview.js';
 import { contextFromRequest, type Context } from './auth.js';
+import { handleMcpNotAllowed, handleMcpPost } from './mcp/http.js';
+import {
+  authorizationServerMetadata,
+  oauthIssuer,
+  protectedResourceMetadata,
+} from './mcp/oauth.js';
 // Registers the Mongoose models so their indexes are built on connect.
 import './models/index.js';
 
@@ -37,6 +43,19 @@ async function startServer() {
       context: ({ req, res }) => contextFromRequest(req, res),
     }),
   );
+
+  // MCP for AI agents (DAN-125): Clerk OAuth for connectors, personal API keys for bots.
+  app.post('/mcp', cors<cors.CorsRequest>(), express.json({ limit: '1mb' }), handleMcpPost);
+  app.get('/mcp', handleMcpNotAllowed);
+  app.delete('/mcp', handleMcpNotAllowed);
+  app.get(
+    ['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp'],
+    protectedResourceMetadata,
+  );
+  app.get('/.well-known/oauth-authorization-server', authorizationServerMetadata);
+  if (!oauthIssuer) {
+    console.warn('CLERK_PUBLISHABLE_KEY is not set; AI agents can only use /mcp with API keys');
+  }
 
   app.listen(port, () => {
     console.log(`Server ready at http://localhost:${port}/graphql`);

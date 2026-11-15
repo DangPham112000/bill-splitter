@@ -89,7 +89,14 @@ How the id is kept (DAN-30, [`backend/src/device.ts`](../backend/src/device.ts),
 | `deviceId`                  | string | Unique                                      |
 | `label`                     | string | From the user agent, e.g. "iPhone · Safari" |
 | `nickname`                  | string | Optional, set by the user                   |
+| `agentUserId`               | string | Set only on an account's "AI agent" device  |
 | `firstSeenAt`, `lastSeenAt` | Date   |                                             |
+
+**AI agent device (DAN-125).** An agent calling `/mcp` has no browser, so each account gets one server-side device labelled "AI agent" (`agentDeviceId` in [`backend/src/apiKeys.ts`](../backend/src/apiKeys.ts)), unique by `agentUserId`. Its `deviceId` is never sent to any client. Expenses the agent adds are bound to it like any device's: the agent can change them later; the app on a phone cannot, except for the admin and treasurers.
+
+## ApiKey
+
+Personal keys (`bsk_...`) that let a bot or script use `/mcp` as the account that created them (DAN-125). Only the SHA-256 `hash` is stored, plus `userId` (Clerk id), `name`, `prefix` (first characters, to tell keys apart), `createdAt` and `lastUsedAt`.
 
 ## MemberDevice
 
@@ -146,7 +153,7 @@ The split is worked out by `splitAmount()` in [`shared/src/split.ts`](../shared/
 
 Indexes: `splitterId + deletedAt + date` (the transaction list), `splitterId + createdByMemberId` ("my transactions"), `createdByDeviceId`.
 
-**Edit rights.** A member edits a transaction only from the device in `createdByDeviceId`; from another device the app shows which device created it. Admins and treasurers can adjust any transaction. (Enforced in the API, see DAN-47.)
+**Edit rights.** A member edits a transaction only from the device in `createdByDeviceId`; from another device the app shows which device created it. Admins and treasurers can adjust any transaction. `updateExpense` (DAN-125) enforces this in the API through `editRight` in [`backend/src/graphql/transactions.ts`](../backend/src/graphql/transactions.ts); the edit screen and the "added on another device" message are still DAN-47.
 
 ## Balances and settlement
 

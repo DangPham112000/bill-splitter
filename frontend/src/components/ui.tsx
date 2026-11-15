@@ -112,7 +112,8 @@ export function Icon({
     | 'search'
     | 'check'
     | 'close'
-    | 'calendar';
+    | 'calendar'
+    | 'bot';
   className?: string;
 }) {
   const paths: Record<typeof name, ReactNode> = {
@@ -163,6 +164,12 @@ export function Icon({
       <>
         <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
         <path d="M3.5 10h17M8 3v4M16 3v4" />
+      </>
+    ),
+    bot: (
+      <>
+        <rect x="4" y="8" width="16" height="12" rx="3" />
+        <path d="M12 4v4M9 13v1.5M15 13v1.5M2 13v3M22 13v3" />
       </>
     ),
   };

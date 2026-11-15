@@ -1,4 +1,4 @@
-import { verifyToken } from '@clerk/backend';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import type { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
 import { deviceIdFromCookie, deviceIdFromHeader } from './device.js';
@@ -54,6 +54,27 @@ export async function getClerkIdFromAuthHeader(header: string | undefined): Prom
     return payload.sub;
   } catch (error) {
     console.warn('Invalid Clerk session token:', (error as Error).message);
+    return null;
+  }
+}
+
+let oauthClient: ReturnType<typeof createClerkClient> | null | undefined;
+
+/**
+ * The Clerk user id behind a Clerk OAuth access token, which connectors such as claude.ai get by
+ * signing the user in (DAN-125, /mcp only). Null when the token is invalid, expired or revoked.
+ */
+export async function getClerkIdFromOAuthToken(token: string): Promise<string | null> {
+  if (oauthClient === undefined) {
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    oauthClient = secretKey ? createClerkClient({ secretKey }) : null;
+  }
+  if (!oauthClient) return null;
+  try {
+    const accessToken = await oauthClient.idPOAuthAccessToken.verify(token);
+    if (accessToken.revoked || accessToken.expired) return null;
+    return accessToken.subject;
+  } catch {
     return null;
   }
 }

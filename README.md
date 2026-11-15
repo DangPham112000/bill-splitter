@@ -50,6 +50,16 @@ Sign-in is optional and never a gate: members join a splitter through its link w
 - **There is no User table.** The Clerk user id is the identity: `Splitter.adminUserId` is the creator's Clerk user id and `Member.userId` is set to the member's Clerk user id when a signed-in user links their member. Email, name and avatar are read from the ecosystem's shared `core.users` (`backend/src/coreUsers.ts`, read-only; only the core-users service in `ecosystem-infra` writes it), with the Clerk API as fallback when a new user's webhook has not arrived yet (DAN-93). Use `findUsers` to show a splitter's admin and linked members.
 - `CLERK_AUTHORIZED_PARTIES` is only `https://bills.dantepham.site`, so session tokens issued to the other apps are refused.
 
+## AI agents (MCP)
+
+Agents add expenses the same way the forms do (DAN-125). `POST /mcp` is a stateless Streamable HTTP MCP server ([`backend/src/mcp/`](backend/src/mcp/)), proxied by the frontend nginx like `/graphql`.
+
+- **Sign-in:** a Clerk OAuth access token (connectors in claude.ai, ChatGPT, Gemini; dynamic client registration is on in the shared Clerk app), or a personal API key `bsk_...` made on the `/agents` page, sent as `Authorization: Bearer` or `?key=`. A 401 points OAuth clients at `/.well-known/oauth-protected-resource/mcp`, which names Clerk's Frontend API, decoded from `CLERK_PUBLISHABLE_KEY`.
+- **Tools:** `list_splitters`, `get_splitter`, `check_duplicate_expense` (read only), `create_splitter`, `add_member`, `add_expense`, `update_expense`. They call the GraphQL resolvers with a context for the signed-in user, so permissions are checked in one place. Nothing is deleted.
+- **Identity:** the agent acts as the account's own member and from the account's "AI agent" device (see [docs/data-model.md](docs/data-model.md#device)). Names picked anonymously on a phone stay with that phone.
+- **Duplicate guard:** `add_expense` refuses with `{ created: false, reason, duplicates }` when an expense with the same amount within a day has a similar description or was added in the last 15 minutes; the agent retries with `allowDuplicate: true` once the user agrees.
+- Try it locally: create a key on `/agents`, then `claude mcp add --transport http bill-splitter http://localhost:5173/mcp --header "Authorization: Bearer bsk_..."`.
+
 ## Join links and link previews
 
 The admin shares `/join/<inviteToken>` by copying it, through the phone's share sheet (Zalo, Messenger) or as a QR code, and can make a new link or turn joining off (DAN-36).
