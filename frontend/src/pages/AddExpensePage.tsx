@@ -11,10 +11,12 @@ import {
 } from '@bill-splitter/shared';
 import AmountInput from '../components/AmountInput';
 import { DisabledReason } from '../components/DisabledReason';
+import { MoreOptionsToggle, type DefaultItem } from '../components/MoreOptions';
 import { Field } from '../components/SplitterForm';
 import { Avatar, Card, EmptyState, Icon, Loading, SectionTitle } from '../components/ui';
 import { GET_SPLITTER, type Member, type Splitter } from '../graphql/splitters';
 import { ADD_EXPENSE, SPLITTER_BALANCES, SPLITTER_EXPENSES } from '../graphql/transactions';
+import { dayLabel, useMoreOptions } from '../lib/moreOptions';
 import { btn, cardClass, inputClass } from '../lib/styles';
 import { useAuthState } from '../lib/useAuthState';
 
@@ -59,9 +61,17 @@ export function AddExpensePage() {
   return <ExpenseForm splitter={splitter} me={splitter.me} />;
 }
 
+const METHOD_PHRASE: Record<SplitMethod, string> = {
+  equal: 'split equally',
+  exact: 'split by amounts',
+  shares: 'split by shares',
+};
+
 /**
- * Amount first with the number keypad, then what it was for and who shares it, so a typical
- * "I paid, split equally" expense is an amount, a few words and one tap.
+ * Amount first with the number keypad, then what it was for. Everything else (payer, split, date,
+ * category, note) sits behind "More options" with the same defaults as the MCP `add_expense`
+ * tool: paid by you, split equally between every member, today, the splitter's currency. So a
+ * typical "I paid, split equally" expense is an amount, a few words and one tap.
  */
 function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
   const navigate = useNavigate();
@@ -73,13 +83,13 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
   const [category, setCategory] = useState<string | null>(null);
   const [date, setDate] = useState(today);
   const [note, setNote] = useState('');
-  const [showNote, setShowNote] = useState(false);
   const [payerId, setPayerId] = useState(me.id);
   const [method, setMethod] = useState<SplitMethod>('equal');
   const [selected, setSelected] = useState(() => new Set(members.map((m) => m.id)));
   const [shares, setShares] = useState<Record<string, number>>({});
   const [exact, setExact] = useState<Record<string, number | null>>({});
   const [error, setError] = useState<string | null>(null);
+  const options = useMoreOptions('expense');
 
   const [addExpense, { loading: saving }] = useMutation(ADD_EXPENSE, {
     refetchQueries: [SPLITTER_EXPENSES, SPLITTER_BALANCES],
@@ -118,20 +128,69 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
       return next;
     });
 
+  const payerName = payerId === me.id ? 'you' : members.find((m) => m.id === payerId)?.displayName;
+  const between =
+    participants.length === members.length
+      ? `between ${members.length}`
+      : participants.length <= 3
+        ? `between ${members
+            .filter((m) => selected.has(m.id))
+            .map((m) => (m.id === me.id ? 'you' : m.displayName))
+            .join(', ')}`
+        : `between ${participants.length} people`;
+  const categoryInfo = EXPENSE_CATEGORIES.find((c) => c.id === category);
+  // What is saved while the options are hidden. Empty category and note save nothing: not listed.
+  const summary: DefaultItem[] = [
+    {
+      key: 'payer',
+      label: `Paid by ${payerName}`,
+      field: canPickPayer ? 'expense-payer' : undefined,
+      hint: 'Change who paid',
+    },
+    {
+      key: 'split',
+      label: `${METHOD_PHRASE[method]} ${between}`,
+      field: 'expense-split',
+      hint: 'Change how it is split',
+    },
+    { key: 'currency', label: splitter.currency },
+    { key: 'date', label: dayLabel(date), field: 'expense-date', hint: 'Change the date' },
+  ];
+  if (categoryInfo) {
+    summary.push({
+      key: 'category',
+      label: `${categoryInfo.emoji} ${categoryInfo.label}`,
+      field: 'expense-category',
+      hint: 'Change the category',
+    });
+  }
+  if (note.trim()) {
+    summary.push({
+      key: 'note',
+      label: 'with a note',
+      field: 'expense-note',
+      hint: 'Edit the note',
+    });
+  }
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
     if (!amount) return setError('Enter the amount.');
     if (!description.trim()) return setError('Say what it was for, e.g. "Lẩu gà lá é".');
-    if (participants.length === 0) return setError('Pick at least one person to split with.');
-    if (method === 'exact' && remaining !== 0) {
-      return setError(
-        remaining > 0
-          ? `${formatAmount(remaining, splitter.currency)} still has to be given to someone.`
-          : `The amounts are ${formatAmount(-remaining, splitter.currency)} over the total.`,
-      );
+    // A split problem lives in the options: open them on the split so it can be fixed.
+    const splitError =
+      participants.length === 0
+        ? 'Pick at least one person to split with.'
+        : method === 'exact' && remaining !== 0
+          ? remaining > 0
+            ? `${formatAmount(remaining, splitter.currency)} still has to be given to someone.`
+            : `The amounts are ${formatAmount(-remaining, splitter.currency)} over the total.`
+          : splitProblem;
+    if (splitError) {
+      options.reveal('expense-split');
+      return setError(splitError);
     }
-    if (splitProblem) return setError(splitProblem);
     try {
       await addExpense({
         variables: {
@@ -184,169 +243,188 @@ function ExpenseForm({ splitter, me }: { splitter: Splitter; me: Member }) {
         />
       </Field>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Category">
-        {EXPENSE_CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            aria-pressed={category === c.id}
-            onClick={() => setCategory(category === c.id ? null : c.id)}
-            className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-              category === c.id
-                ? 'border-primary bg-primary-soft text-primary-soft-foreground'
-                : 'border-input bg-card hover:bg-muted'
-            }`}
+      <MoreOptionsToggle
+        className={`${cardClass} px-4 py-3`}
+        open={options.open}
+        onOpenChange={options.setOpen}
+        items={summary}
+        onPick={options.reveal}
+      />
+
+      {options.open && (
+        <>
+          <div
+            id="expense-category"
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Category"
           >
-            {c.emoji} {c.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Paid by">
-          {canPickPayer ? (
-            <select
-              className={inputClass}
-              value={payerId}
-              onChange={(e) => setPayerId(e.target.value)}
-            >
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id === me.id ? `${m.displayName} (you)` : m.displayName}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className={`${inputClass} truncate`}>{me.displayName} (you)</span>
-          )}
-        </Field>
-        <Field label="Date">
-          <input
-            type="date"
-            className={inputClass}
-            value={date}
-            onChange={(e) => setDate(e.target.value || today())}
-          />
-        </Field>
-      </div>
-
-      <section className="flex flex-col gap-2">
-        <SectionTitle
-          action={
-            <div className="flex gap-1">
+            {EXPENSE_CATEGORIES.map((c) => (
               <button
+                key={c.id}
                 type="button"
-                className={btn.small}
-                onClick={() => setSelected(new Set(members.map((m) => m.id)))}
+                aria-pressed={category === c.id}
+                onClick={() => setCategory(category === c.id ? null : c.id)}
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  category === c.id
+                    ? 'border-primary bg-primary-soft text-primary-soft-foreground'
+                    : 'border-input bg-card hover:bg-muted'
+                }`}
               >
-                All
+                {c.emoji} {c.label}
               </button>
-              <button type="button" className={btn.small} onClick={() => setSelected(new Set())}>
-                None
-              </button>
-            </div>
-          }
-        >
-          Split between ({participants.length})
-        </SectionTitle>
+            ))}
+          </div>
 
-        <div className="glass flex rounded-full p-1" role="radiogroup" aria-label="Split method">
-          {METHODS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              role="radio"
-              aria-checked={method === m.id}
-              onClick={() => setMethod(m.id)}
-              className={`flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                method === m.id
-                  ? 'glass-thumb text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Paid by">
+              {canPickPayer ? (
+                <select
+                  id="expense-payer"
+                  className={inputClass}
+                  value={payerId}
+                  onChange={(e) => setPayerId(e.target.value)}
+                >
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.id === me.id ? `${m.displayName} (you)` : m.displayName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className={`${inputClass} truncate`}>{me.displayName} (you)</span>
+              )}
+            </Field>
+            <Field label="Date">
+              <input
+                id="expense-date"
+                type="date"
+                className={inputClass}
+                value={date}
+                onChange={(e) => setDate(e.target.value || today())}
+              />
+            </Field>
+          </div>
+
+          <section id="expense-split" className="flex scroll-mt-24 flex-col gap-2">
+            <SectionTitle
+              action={
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className={btn.small}
+                    onClick={() => setSelected(new Set(members.map((m) => m.id)))}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={btn.small}
+                    onClick={() => setSelected(new Set())}
+                  >
+                    None
+                  </button>
+                </div>
+              }
             >
-              {m.label}
-            </button>
-          ))}
-        </div>
-        <p className="px-1 text-xs text-muted-foreground">
-          {METHODS.find((m) => m.id === method)!.hint}
-        </p>
+              Split between ({participants.length})
+            </SectionTitle>
 
-        <ul className={`${cardClass} divide-y divide-border overflow-hidden`}>
-          {members.map((member) => {
-            const on = selected.has(member.id);
-            return (
-              <li key={member.id} className="flex items-center gap-3 px-3 py-2.5">
-                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={() => toggle(member.id)}
-                    className="h-5 w-5 shrink-0 accent-primary"
-                  />
-                  <Avatar name={member.displayName} size="sm" />
-                  <span className={`truncate ${on ? '' : 'text-muted-foreground'}`}>
-                    {member.displayName}
-                    {member.id === me.id && <span className="text-muted-foreground"> (you)</span>}
-                  </span>
-                </label>
-                {on && method === 'shares' && (
-                  <Stepper
-                    value={shares[member.id] ?? 1}
-                    onChange={(n) => setShares((s) => ({ ...s, [member.id]: n }))}
-                  />
-                )}
-                {on && method === 'exact' ? (
-                  <MiniAmountInput
-                    currency={splitter.currency}
-                    value={exact[member.id] ?? null}
-                    onChange={(n) => setExact((s) => ({ ...s, [member.id]: n }))}
-                    label={`Amount for ${member.displayName}`}
-                  />
-                ) : (
-                  <span className="w-24 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
-                    {on && preview?.has(member.id)
-                      ? formatAmount(preview.get(member.id)!, splitter.currency)
-                      : ''}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {method === 'exact' && amount ? (
-          <p
-            className={`px-1 text-sm ${remaining === 0 ? 'text-success' : 'text-warning'}`}
-            aria-live="polite"
-          >
-            {remaining === 0
-              ? 'Adds up to the total.'
-              : remaining > 0
-                ? `${formatAmount(remaining, splitter.currency)} left to assign`
-                : `${formatAmount(-remaining, splitter.currency)} over the total`}
-          </p>
-        ) : null}
-      </section>
+            <div
+              className="glass flex rounded-full p-1"
+              role="radiogroup"
+              aria-label="Split method"
+            >
+              {METHODS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={method === m.id}
+                  onClick={() => setMethod(m.id)}
+                  className={`flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    method === m.id
+                      ? 'glass-thumb text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="px-1 text-xs text-muted-foreground">
+              {METHODS.find((m) => m.id === method)!.hint}
+            </p>
 
-      {showNote ? (
-        <Field label="Note">
-          <textarea
-            className={`${inputClass} min-h-20`}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={1000}
-            placeholder="What was on the bill, who forgot their wallet…"
-          />
-        </Field>
-      ) : (
-        <button
-          type="button"
-          className={`${btn.ghost} self-start`}
-          onClick={() => setShowNote(true)}
-        >
-          <Icon name="plus" className="h-4 w-4" />
-          Add a note
-        </button>
+            <ul className={`${cardClass} divide-y divide-border overflow-hidden`}>
+              {members.map((member) => {
+                const on = selected.has(member.id);
+                return (
+                  <li key={member.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => toggle(member.id)}
+                        className="h-5 w-5 shrink-0 accent-primary"
+                      />
+                      <Avatar name={member.displayName} size="sm" />
+                      <span className={`truncate ${on ? '' : 'text-muted-foreground'}`}>
+                        {member.displayName}
+                        {member.id === me.id && (
+                          <span className="text-muted-foreground"> (you)</span>
+                        )}
+                      </span>
+                    </label>
+                    {on && method === 'shares' && (
+                      <Stepper
+                        value={shares[member.id] ?? 1}
+                        onChange={(n) => setShares((s) => ({ ...s, [member.id]: n }))}
+                      />
+                    )}
+                    {on && method === 'exact' ? (
+                      <MiniAmountInput
+                        currency={splitter.currency}
+                        value={exact[member.id] ?? null}
+                        onChange={(n) => setExact((s) => ({ ...s, [member.id]: n }))}
+                        label={`Amount for ${member.displayName}`}
+                      />
+                    ) : (
+                      <span className="w-24 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
+                        {on && preview?.has(member.id)
+                          ? formatAmount(preview.get(member.id)!, splitter.currency)
+                          : ''}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {method === 'exact' && amount ? (
+              <p
+                className={`px-1 text-sm ${remaining === 0 ? 'text-success' : 'text-warning'}`}
+                aria-live="polite"
+              >
+                {remaining === 0
+                  ? 'Adds up to the total.'
+                  : remaining > 0
+                    ? `${formatAmount(remaining, splitter.currency)} left to assign`
+                    : `${formatAmount(-remaining, splitter.currency)} over the total`}
+              </p>
+            ) : null}
+          </section>
+
+          <Field label="Note">
+            <textarea
+              id="expense-note"
+              className={`${inputClass} min-h-20`}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={1000}
+              placeholder="What was on the bill, who forgot their wallet…"
+            />
+          </Field>
+        </>
       )}
 
       {error && (

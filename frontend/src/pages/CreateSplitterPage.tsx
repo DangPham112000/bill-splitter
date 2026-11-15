@@ -11,6 +11,7 @@ import {
   type Splitter,
 } from '../graphql/splitters';
 import { SplitterForm } from '../components/SplitterForm';
+import type { DefaultItem } from '../components/MoreOptions';
 import { EventPicker } from '../components/EventPicker';
 import { ParticipantsEditor, type LinkedRow } from '../components/ParticipantsEditor';
 import { emptySplitterForm, type SplitterFormValues } from '../lib/splitterForm';
@@ -19,6 +20,9 @@ import { Icon } from '../components/ui';
 import { btn } from '../lib/styles';
 import { useAuthState } from '../lib/useAuthState';
 import { formFromEvent } from '../lib/eventPrefill';
+
+/** The participants list inside "More options", opened when its names have a problem. */
+const PARTICIPANTS = 'splitter-participants';
 
 const ME_NAME = gql`
   query MeName {
@@ -77,7 +81,7 @@ function CreateSplitterForm() {
   // null until edited, so the account name can fill it in once it loads.
   const [adminName, setAdminName] = useState<string | null>(null);
   const [memberNames, setMemberNames] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; field?: string } | null>(null);
   const [createSplitter, { loading }] = useMutation<{ createSplitter: Splitter }>(CREATE_SPLITTER, {
     refetchQueries: [MY_SPLITTERS],
   });
@@ -86,15 +90,35 @@ function CreateSplitterForm() {
   const otherNames = memberNames.map(cleanName).filter(Boolean);
   const initial = event ? formFromEvent(event) : emptySplitterForm;
 
+  // How the participants read in the line of saved values while "More options" is off.
+  const othersCount = linkedMembers.length + otherNames.length;
+  const participantsSummary: DefaultItem[] = [
+    {
+      key: 'participants',
+      label: `${shownAdminName.trim() ? `you as ${cleanName(shownAdminName)}` : 'your name?'}${
+        othersCount ? ` + ${othersCount} ${othersCount === 1 ? 'person' : 'people'}` : ''
+      }`,
+      field: PARTICIPANTS,
+      hint: 'Change your name or add people',
+    },
+  ];
+
   const submit = async (values: SplitterFormValues) => {
-    if (!shownAdminName.trim()) return setError('Enter your name in this splitter');
+    if (!shownAdminName.trim()) {
+      return setError({ message: 'Enter your name in this splitter', field: PARTICIPANTS });
+    }
     // Same check as the backend: "Đăng" and "dang" would be one person to the group.
     const clash = findSameName([
       cleanName(shownAdminName),
       ...linkedMembers.map((m) => m.name),
       ...otherNames,
     ]);
-    if (clash) return setError(`"${clash.name}" is the same name as "${clash.sameAs}"`);
+    if (clash) {
+      return setError({
+        message: `"${clash.name}" is the same name as "${clash.sameAs}"`,
+        field: PARTICIPANTS,
+      });
+    }
     setError(null);
     try {
       const { data } = await createSplitter({
@@ -117,7 +141,7 @@ function CreateSplitterForm() {
       });
       if (data) navigate(`/s/${data.createSplitter.id}`, { replace: true });
     } catch (e) {
-      setError((e as Error).message);
+      setError({ message: (e as Error).message });
     }
   };
 
@@ -141,8 +165,11 @@ function CreateSplitterForm() {
         key={event?.id ?? 'blank'}
         initial={initial}
         submitLabel="Create splitter"
+        optionsForm="create"
+        childrenSummary={participantsSummary}
         submitting={loading}
-        error={error}
+        error={error?.message}
+        errorField={error?.field}
         onSubmit={submit}
       >
         <ParticipantsEditor
