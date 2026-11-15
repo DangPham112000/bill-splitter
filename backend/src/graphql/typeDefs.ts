@@ -250,6 +250,39 @@ export const typeDefs = `#graphql
     split: SplitInput!
   }
 
+  "Fields left out keep their value. Same rules and units as AddExpenseInput."
+  input UpdateExpenseInput {
+    amount: Float
+    description: String
+    "YYYY-MM-DD."
+    date: String
+    "Null clears it."
+    category: String
+    "Null clears it."
+    note: String
+    "Picking a payer also turns paidFromFund off."
+    paidByMemberId: ID
+    paidFromFund: Boolean
+    "Left out: the same people and method, re-split when the amount changes (not for exact splits)."
+    split: SplitInput
+  }
+
+  "A personal API key for /mcp (DAN-125). The key itself is shown only once, when created."
+  type ApiKey {
+    id: ID!
+    name: String!
+    "First characters of the key, e.g. bsk_AbC123, to tell keys apart."
+    prefix: String!
+    createdAt: String!
+    lastUsedAt: String
+  }
+
+  type CreatedApiKey {
+    "The raw key. Shown only here."
+    key: String!
+    apiKey: ApiKey!
+  }
+
   "A name on the join screen (DAN-41)."
   type JoinableMember {
     id: ID!
@@ -382,6 +415,8 @@ export const typeDefs = `#graphql
     invite(token: String!): InvitePreview
     "The device sending the X-Device-Id header, or null if it is not registered."
     thisDevice: ThisDevice
+    "The signed-in user's API keys for AI agents (DAN-125), newest first."
+    apiKeys: [ApiKey!]!
   }
 
   type Mutation {
@@ -430,6 +465,16 @@ export const typeDefs = `#graphql
     send X-Device-Id. Not on a locked splitter.
     """
     addExpense(splitterId: ID!, input: AddExpenseInput!): Transaction!
+    """
+    Change an expense; only the fields given change (DAN-125). The member who added it may change
+    it from the device it was added on (X-Device-Id); the admin and treasurers may change any.
+    Not on a locked splitter.
+    """
+    updateExpense(id: ID!, input: UpdateExpenseInput!): Transaction!
+    "Create a personal API key for an AI agent or bot to use /mcp (DAN-125). Needs sign-in."
+    createApiKey(name: String!): CreatedApiKey!
+    "Revoke one of the signed-in user's API keys. False when it was not found."
+    revokeApiKey(id: ID!): Boolean!
     """
     Join through the link without signing in (DAN-41): pick your name or add a new one. The
     choice is kept for this device (send X-Device-Id), which can then open the splitter as that

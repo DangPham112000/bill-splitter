@@ -29,6 +29,12 @@ export function Layout() {
           <SplitterNav />
           <div className="mt-auto flex flex-col gap-3 border-t border-glass-border pt-4">
             {authEnabled && (
+              <Link to="/agents" className={`${btn.ghost} justify-start`}>
+                <Icon name="bot" />
+                AI agents
+              </Link>
+            )}
+            {authEnabled && (
               <div className="px-2">
                 <AccountMenu showName />
               </div>
@@ -50,7 +56,14 @@ export function Layout() {
       <header className="glass-strong sticky top-0 z-30 rounded-none border-x-0 border-t-0">
         <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-4">
           <Brand />
-          {authEnabled && <AccountMenu />}
+          {authEnabled && (
+            <div className="flex items-center gap-1">
+              <Link to="/agents" aria-label="AI agents" title="AI agents" className={btn.icon}>
+                <Icon name="bot" />
+              </Link>
+              <AccountMenu />
+            </div>
+          )}
         </div>
       </header>
       <main className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-10">

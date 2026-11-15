@@ -13,6 +13,9 @@ export default defineConfig({
     proxy: {
       '/graphql': 'http://localhost:4000',
       '/health': 'http://localhost:4000',
+      '/mcp': 'http://localhost:4000',
+      '/.well-known/oauth-protected-resource': 'http://localhost:4000',
+      '/.well-known/oauth-authorization-server': 'http://localhost:4000',
     },
   },
 });

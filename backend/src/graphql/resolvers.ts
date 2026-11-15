@@ -6,6 +6,7 @@ import { deviceResolvers } from './devices.js';
 import { memberResolvers } from './members.js';
 import { transactionResolvers } from './transactions.js';
 import { joiningResolvers } from './joining.js';
+import { apiKeyResolvers } from './apiKeys.js';
 
 export const resolvers = {
   Query: {
@@ -24,6 +25,7 @@ export const resolvers = {
     },
     ...splitterResolvers.Query,
     ...deviceResolvers.Query,
+    ...apiKeyResolvers.Query,
   },
   Mutation: {
     ...splitterResolvers.Mutation,
@@ -31,6 +33,7 @@ export const resolvers = {
     ...memberResolvers.Mutation,
     ...transactionResolvers.Mutation,
     ...joiningResolvers.Mutation,
+    ...apiKeyResolvers.Mutation,
   },
   Splitter: { ...splitterResolvers.Splitter, ...transactionResolvers.Splitter },
   Transaction: transactionResolvers.Transaction,

@@ -1,4 +1,4 @@
-import { verifyToken } from '@clerk/backend';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import type { Request, Response } from 'express';
 import { GraphQLError } from 'graphql';
 import { deviceIdFromCookie, deviceIdFromHeader } from './device.js';
@@ -16,6 +16,11 @@ export interface Context {
   deviceId: string | null;
   /** The deviceId in the httpOnly cookie, used to restore a device whose localStorage was cleared. */
   cookieDeviceId: string | null;
+  /**
+   * True when the session token was issued to another ecosystem app (its "azp" origin is not this
+   * app's), i.e. a server-to-server call. Such calls cannot manage API keys (DAN-125).
+   */
+  fromOtherApp?: boolean;
   /** For setting the device cookie. */
   res: Response;
 }
@@ -29,12 +34,23 @@ const getAuthorizedParties = () =>
 
 let warnedMissingKey = false;
 
+/** Whether a session token's "azp" is this app: APP_URL's origin, or a local dev server. */
+const isOwnOrigin = (azp: string) =>
+  azp === new URL(process.env.APP_URL || 'https://bills.dantepham.site').origin ||
+  /^http:\/\/localhost(:\d+)?$/.test(azp);
+
 /**
  * Resolve the Clerk user id from an "Authorization: Bearer <Clerk session token>" header.
  * Returns null when there is no header, no secret key, or the token is invalid, so the request
  * carries on as an anonymous one instead of failing.
  */
 export async function getClerkIdFromAuthHeader(header: string | undefined): Promise<string | null> {
+  return (await verifySessionHeader(header))?.sub ?? null;
+}
+
+async function verifySessionHeader(
+  header: string | undefined,
+): Promise<{ sub: string; azp?: string } | null> {
   if (!header?.startsWith('Bearer ')) return null;
 
   const secretKey = process.env.CLERK_SECRET_KEY;
@@ -51,9 +67,30 @@ export async function getClerkIdFromAuthHeader(header: string | undefined): Prom
       secretKey,
       authorizedParties: getAuthorizedParties(),
     });
-    return payload.sub;
+    return { sub: payload.sub, azp: typeof payload.azp === 'string' ? payload.azp : undefined };
   } catch (error) {
     console.warn('Invalid Clerk session token:', (error as Error).message);
+    return null;
+  }
+}
+
+let oauthClient: ReturnType<typeof createClerkClient> | null | undefined;
+
+/**
+ * The Clerk user id behind a Clerk OAuth access token, which connectors such as claude.ai get by
+ * signing the user in (DAN-125, /mcp only). Null when the token is invalid, expired or revoked.
+ */
+export async function getClerkIdFromOAuthToken(token: string): Promise<string | null> {
+  if (oauthClient === undefined) {
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    oauthClient = secretKey ? createClerkClient({ secretKey }) : null;
+  }
+  if (!oauthClient) return null;
+  try {
+    const accessToken = await oauthClient.idPOAuthAccessToken.verify(token);
+    if (accessToken.revoked || accessToken.expired) return null;
+    return accessToken.subject;
+  } catch {
     return null;
   }
 }
@@ -69,9 +106,11 @@ export function requireClerkId(context: Context): string {
 /** Build the GraphQL context from the request's Authorization and X-Device-Id headers. */
 export async function contextFromRequest(req: Request, res: Response): Promise<Context> {
   const header = req.headers.authorization;
-  const clerkId = await getClerkIdFromAuthHeader(header);
+  const session = await verifySessionHeader(header);
+  const clerkId = session?.sub ?? null;
   return {
     clerkId,
+    fromOtherApp: Boolean(session?.azp && !isOwnOrigin(session.azp)),
     sessionToken: clerkId && header ? header.slice('Bearer '.length).trim() : null,
     deviceId: deviceIdFromHeader(req),
     cookieDeviceId: deviceIdFromCookie(req),

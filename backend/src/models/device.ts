@@ -7,11 +7,18 @@ const deviceSchema = new Schema({
   label: { type: String, required: true, maxlength: 100 },
   // Optional name the user gives this device, e.g. "Dang's phone".
   nickname: { type: String, trim: true, maxlength: 50 },
+  // Set on the one server-side "device" an account's AI agents act from over MCP (DAN-125).
+  // Its deviceId never leaves the server, so only that account's agents can use it.
+  agentUserId: { type: String },
   firstSeenAt: { type: Date, default: Date.now },
   lastSeenAt: { type: Date, default: Date.now },
 });
 
 deviceSchema.index({ deviceId: 1 }, { unique: true });
+deviceSchema.index(
+  { agentUserId: 1 },
+  { unique: true, partialFilterExpression: { agentUserId: { $type: 'string' } } },
+);
 
 export type Device = InferSchemaType<typeof deviceSchema>;
 export const DeviceModel = model('Device', deviceSchema);
