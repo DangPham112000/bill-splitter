@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { GET_SPLITTER, UPDATE_SPLITTER, type Splitter } from '../graphql/splitters';
 import { SplitterForm } from '../components/SplitterForm';
-import type { SplitterFormValues } from '../lib/splitterForm';
+import { hasOptionalValues, type SplitterFormValues } from '../lib/splitterForm';
 import { SignInPrompt } from '../components/SignInPrompt';
 import { Icon, Loading } from '../components/ui';
 import { btn } from '../lib/styles';
@@ -26,6 +26,17 @@ export function EditSplitterPage() {
   if (!splitter?.isAdmin) {
     return <p className="pt-6 text-muted-foreground">Only the admin can edit this splitter.</p>;
   }
+
+  const initial: SplitterFormValues = {
+    name: splitter.name,
+    description: splitter.description ?? '',
+    type: splitter.type,
+    coverEmoji: splitter.coverEmoji ?? '',
+    startDate: splitter.startDate ?? '',
+    endDate: splitter.endDate ?? '',
+    currency: splitter.currency,
+    hasInitialFund: splitter.hasInitialFund,
+  };
 
   const submit = async (values: SplitterFormValues) => {
     setError(null);
@@ -60,16 +71,9 @@ export function EditSplitterPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Edit splitter</h1>
       </div>
       <SplitterForm
-        initial={{
-          name: splitter.name,
-          description: splitter.description ?? '',
-          type: splitter.type,
-          coverEmoji: splitter.coverEmoji ?? '',
-          startDate: splitter.startDate ?? '',
-          endDate: splitter.endDate ?? '',
-          currency: splitter.currency,
-          hasInitialFund: splitter.hasInitialFund,
-        }}
+        initial={initial}
+        optionsForm="edit"
+        startOptionsOpen={hasOptionalValues(initial)}
         currencyHint="Can be changed until the first transaction is added."
         submitLabel="Save"
         submitting={saving}

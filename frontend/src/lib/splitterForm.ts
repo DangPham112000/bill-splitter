@@ -23,4 +23,16 @@ export const emptySplitterForm: SplitterFormValues = {
   hasInitialFund: false,
 };
 
+/** Whether a splitter has optional values other than the defaults, so its edit form opens them. */
+export const hasOptionalValues = (values: SplitterFormValues) =>
+  Boolean(
+    values.description.trim() ||
+    values.coverEmoji ||
+    values.startDate ||
+    values.endDate ||
+    values.type !== emptySplitterForm.type ||
+    values.currency !== emptySplitterForm.currency ||
+    values.hasInitialFund !== emptySplitterForm.hasInitialFund,
+  );
+
 export { inputClass } from './styles';
